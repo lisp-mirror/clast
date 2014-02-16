@@ -1,0 +1,31 @@
+;;;; -*- Mode: Lisp -*-
+
+;;;; clast.system --
+
+;;;; See file COPYING in main folder for licensing and copyright information.
+
+(mk:defsystem "CLAST"
+  :components ("clast-package"
+               (:file "clast-elements"
+                :depends-on ("clast-package"))
+               (:module "impl-dependent"
+                :depends-on ("clast-package")
+                :components (
+                             #+lispworks
+                             "clast-lispworks"
+
+                             #+allegro
+                             "clast-allegro"
+
+                             #+sbcl
+                             "clast-sbcl"
+                             )
+                )
+               (:file "env"
+                :depends-on ("impl-dependent"))
+               (:file "parse"
+                :depends-on ("clast-elements" "env"))
+               )
+  )
+
+;;;; end of file -- clast.system --
