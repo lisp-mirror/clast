@@ -1,0 +1,7 @@
+# .gitignore --
+
+*fasl
+*fsl
+*~
+
+# end of file -- .gitignore --
