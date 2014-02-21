@@ -11,11 +11,17 @@
                (:module "impl-dependent"
                 :depends-on ("clast-package")
                 :components (
+                             #+ccl
+                             "clast-clozure-cl"
+
                              #+lispworks
                              "clast-lispworks"
 
                              #+allegro
                              "clast-allegro"
+
+                             #+cmucl
+                             "clast-cmucl"
 
                              #+sbcl
                              "clast-sbcl"

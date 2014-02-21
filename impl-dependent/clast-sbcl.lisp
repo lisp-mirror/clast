@@ -12,6 +12,10 @@
 
 (in-package "CLAST")
 
+(eval-when (:load-toplevel :compile-toplevel :execute)
+  (require :sb-cltl2))
+
+
 ;;;; The Magnificent (yet neglected) 7.
 ;;;; CLtL2 environment manipulation manipulation functions.
 
