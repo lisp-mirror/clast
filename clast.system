@@ -8,6 +8,9 @@
   :components ("clast-package"
                (:file "clast-elements"
                 :depends-on ("clast-package"))
+               (:module "utilities"
+                :components ("lambda-list-parsing")
+                :depends-on ("clast-package"))
                (:module "impl-dependent"
                 :depends-on ("clast-package")
                 :components (
@@ -30,7 +33,7 @@
                (:file "env"
                 :depends-on ("impl-dependent"))
                (:file "parse"
-                :depends-on ("clast-elements" "env"))
+                :depends-on ("clast-elements" "env" "utilities"))
                )
   )
 

@@ -61,8 +61,6 @@
    ))
 
 
-
-
 (defclass symbol-ref (form)
   ((symbol :accessor form-symbol :initarg :symbol)
    (local :accessor form-local
@@ -105,13 +103,66 @@
 (defclass lambda-application (function-application) ())
 
 
+(defclass functional-operator-application (function-application)
+  ()
+  (:documentation "The Functional Operator Application CLass.
+
+This class represents functional applications where the operator is
+non-standard with respect to the Common Lisp Standard; i.e.,
+applications where the operator is not a symbol or a lambda expression."))
+
+
 (defclass local-function-application (function-application) ())
 
 
 (defclass macro-application (application expansion-component) ())
 
 
-(defclass local-macro-application (marco-application) ())
+(defclass local-macro-application (macro-application) ())
+
+
+(defclass declaration-form (form)
+  ((decls :accessor declaration-form-declarations
+          :initarg :declarations
+          )
+   (new-env :accessor declaration-form-resulting-environment
+            :accessor form-resulting-environment
+            :initarg :resulting-environment)
+   )
+  )
+
+
+(defclass declaration-specifier-form (form)
+  ((identifier :accessor declaration-specifier-form-identifier
+               :accessor declaration-specifier-identifier
+               )
+   )
+  )
+
+
+(defclass tf-declaration-specifier-form (declaration-specifier-form)
+  ((type-spec :accessor declaration-type-spec
+              :initarg :spec)
+   (symbol-refs :accessor declaration-type-spec-symbols
+                :initarg :symbols)
+   )
+  )
+
+
+(defclass type-declaration-specifier-form (tf-declaration-specifier-form)
+  ((identifier :initform 'type))
+  )
+
+
+(defclass ftype-declaration-specifier-form (tf-declaration-specifier-form)
+  ((identifier :initform 'ftype))
+  )
+
+
+(defclass id-declaration-specifier-form (declaration-specifier-form)
+  ((identifier :initarg :id)
+   )
+  )
 
 
 ;;;; "composite" forms.
@@ -142,7 +193,7 @@
 
 (defclass eval-when-form (form implicit-progn)
   ((situations :accessor form-situations
-               :initarg :sitiations)
+               :initarg :situations)
    )
   )
 
@@ -165,7 +216,9 @@
 
 (defclass function-form (form)
   ((funct :accessor form-function
-          :initarg :function)
+          :initarg :function
+          :initarg :name)
+   (type :initform 'function)
    )
   )
 
@@ -175,13 +228,28 @@
                 :accessor form-lambda-list
                 :initarg :args
                 :initarg :lambda-list)
+   (funct :initform 'lambda)
    )
   )
 
 
+(defclass function-definition-form (lambda-form)
+  ()
+  )
+
+
+(defclass macro-definition-form (function-definition-form)
+  ((type :initform t))
+  )
+
+
+
+
+
 (defclass go-form (form)
   ((name :accessor form-name
-         :initarg :name)
+         :initarg :name
+         :initarg :tag)
    (enclosing-tagbody :accessor form-tagbody
                       :initarg :enclosing-tagbody)
    )
@@ -237,6 +305,13 @@
 
 
 (defclass let*-form (vbinding-form implicit-progn) ())
+
+
+(defclass mvb-form (vbinding-form implicit-progn)
+  ((values-form :accessor form-values-form
+                :initarg :values-form)
+   )
+  )
 
 
 (defclass load-time-value-form (form)

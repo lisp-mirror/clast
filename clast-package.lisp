@@ -30,9 +30,14 @@ smaller and broken rocks.")
 
   (:export
    "PARSE"
+   "PARSE-FORM"
+   "OPERATOR"
+   "ARGUMENTS"
+   "PARSE-DECLARATION"
+   )
 
+  (:export
    "WALK"
-
    )
 
   )
