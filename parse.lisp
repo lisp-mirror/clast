@@ -31,12 +31,18 @@
 The methods of this generic function return a AST 'node' (a CLAST-ELEMENT) 
 and the - possibly modified - ENVIRONMENT.
 
+The methods of PARSE dispatch on 'atomic' and on 'compound' (i.e.,
+CONS) forms.  Atomic forms - numbers, string, arrays, and symbols -
+are dealt with directly.  Compound forms are dispatched to PARSE-FORM.
+
 Arguments and Values:
 
 form : the form to be parsed.
 keys : the collection of key-value pairs passed to the call.
 enclosing-form : the form that \"contains\" the form beling parsed.
 environment : the environment in which the form is being parsed.
+element : a CLAST-ELEMENT representing the AST node just parsed.
+environment1 : the environment resulting from parsing the FORM.
 ")
   )
 
@@ -47,7 +53,11 @@ environment : the environment in which the form is being parsed.
                         macroexpand
                         environment
                         &allow-other-keys)
-  (:documentation "Parses a form in a given 'environment' given its 'op'.
+  (:documentation "Parses a form in a given 'ENVIRONMENT' given its 'op'.
+
+The methods of PARSE-FORM descend recursively in a form, by
+dispatching on the form 'operator'.  Each sub-form is passed,
+recursively to PARSE.
 
 Arguments and Values:
 
@@ -55,6 +65,8 @@ form : the form to be parsed.
 keys : the collection of key-value pairs passed to the call.
 enclosing-form : the form that \"contains\" the form beling parsed.
 environment : the environment in which the form is being parsed.
+element : a CLAST-ELEMENT representing the AST node just parsed.
+environment1 : the environment resulting from parsing the FORM.
 ")
   )
 
@@ -109,8 +121,23 @@ environment : the environment in which the form is being parsed.
   (rest form))
 
 
+(declaim (ftype (function (t) boolean)
+                is-lambda-form
+                is-declaration)
+         (inline is-lambda-form
+                 is-declaration)
+         )
+
 (defun is-lambda-form (form)
   (and (listp form) (eq (first form) 'lambda)))
+
+
+(defun is-declaration (form)
+  (and (listp form) (eq (first form) 'declare)))
+
+
+(defun is-quoted-form (form)
+  (and (listp form) (eq (first form) 'quote)))
 
 
 ;;;;---------------------------------------------------------------------------
@@ -263,8 +290,9 @@ environment : the environment in which the form is being parsed.
                   environment
                   enclosing-form
                   &allow-other-keys)
-  (if (constantp form environment)
-      (values (make-instance 'constant-form
+  (if (and (constantp form environment)
+           (not (is-quoted-form form)))
+      (values (make-instance 'constant-form ;
                              :type (type-of form)
                              :source form
                              :top enclosing-form
@@ -472,6 +500,49 @@ environment : the environment in which the form is being parsed.
      environment)))
 
 
+(defmethod parse-form ((op (eql 'return-from)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+
+  (let ((block-name (second form))
+        (result (third form))
+        )
+    (values
+     (make-instance 'return-from-form
+                    :name block-name
+                    :result (apply #'parse result keys)
+                    :top enclosing-form
+                    :source form
+                    )
+     environment)
+    ))
+
+
+(defmethod parse-form ((op (eql 'tagbody)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+  (let* ((tags-n-stmts (rest form))
+         (tags (remove-if (complement #'symbolp) tags-n-stmts))
+         )
+    (values
+     (make-instance 'tagbody-form
+                    :tags tags
+                    :source form
+                    :top enclosing-form)
+     environment)
+    ))
+
+
 (defmethod parse-form ((op (eql 'catch)) form
                        &rest keys
                        &key
@@ -538,6 +609,114 @@ environment : the environment in which the form is being parsed.
                   )
    environment)
   )
+
+
+(defmethod parse-form ((op (eql 'progv)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+  (destructuring-bind (progv-kwd symbols values &body body)
+      form
+    (declare (ignore progv-kwd))
+    (warn "Parsing of PROGV forms may not be completely precise.")
+    (values
+     (make-instance 'progv-form
+                    :top enclosing-form
+                    :source form
+                    :body-env environment
+                    :symbols (apply #'parse symbols keys)
+                    :values (apply #'parse values keys)
+                    :progn (apply #'parse-form-seq body keys)
+                    )
+     environment)
+    ))
+
+
+(defmethod parse-form ((op (eql 'prog)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+  (destructuring-bind (prog-kwd vars &body decls-tags-stmts)
+      form
+    (declare (ignore prog-kwd))
+    (let* ((normalized-bindings (listify vars))
+           (parsed-bindings (mapcar (lambda (b)
+                                      (list (first b)
+                                            (apply #'parse (second b)
+                                                   keys)))
+                                    normalized-bindings))
+           (decls (remove-if (complement #'is-declaration)
+                             decls-tags-stmts))
+           (tags-stmts (remove-if #'is-declaration
+                                  decls-tags-stmts)) ; Yeah: two REMOVE-IFs
+                                                     ; in a row like these
+                                                     ; are inefficient!
+                               
+           (ne (augment-environment environment
+                                    :variable (mapcar #'first
+                                                      normalized-bindings)
+
+                                    ;; Missing :declare...
+                                    ))
+           
+           )
+      (declare (ignore decls))
+      (values
+       (make-instance 'prog-form
+                      :binds parsed-bindings
+                      :body (apply #'parse `(tagbody ,.tags-stmts)
+                                   :environment ne
+                                   keys)
+                      :body-env ne
+                      :top enclosing-form
+                      :source form)
+       environment)
+      )))
+
+
+(defmethod parse-form ((op (eql 'prog*)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+  (destructuring-bind (prog*-kwd vars &body decls-tags-stmts)
+      form
+    (declare (ignore prog*-kwd))
+    (let ((normalized-bindings (listify vars)))
+      (multiple-value-bind (parsed-bindings ne)
+          (apply #'parse-binding-seq normalized-bindings keys)
+        (let ((decls (remove-if (complement #'is-declaration)
+                                decls-tags-stmts))
+              (tags-stmts (remove-if #'is-declaration
+                                     decls-tags-stmts)) ; Yeah: two REMOVE-IFs
+                                                        ; in a row like these
+                                                        ; are inefficient!
+                               
+              )
+          ;; Should add declarations to environment.
+          (declare (ignore decls))
+          (values
+           (make-instance 'prog*-form
+                          :binds parsed-bindings
+                          :body (apply #'parse `(tagbody ,.tags-stmts)
+                                       :environment ne
+                                       keys)
+                          :body-env ne
+                          :top enclosing-form
+                          :source form)
+           environment)
+          )))))
 
 
 (defmethod parse-form ((op (eql 'eval-when)) form
@@ -688,6 +867,118 @@ environment : the environment in which the form is being parsed.
           environment))
 
 
+(defmethod parse-form ((op (eql 'cond)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore enclosing-form macroexpand))
+  (let* ((clauses (rest form))
+         (clause-forms
+          (mapcar (lambda (c)
+                    (make-instance
+                     'clause-form
+                     :selector (apply #'parse (first c) keys)
+                     :progn (apply #'parse-form-seq (rest c) keys)
+                     :body-env environment
+                     :top form
+                     :source c
+                     ))
+                  clauses))
+         )
+    
+    (values
+     (make-instance 'cond-form
+                    :clauses clause-forms
+                    :top enclosing-form
+                    :source form
+                    )
+     environment)))
+
+
+(defmethod parse-form ((op (eql 'case)) form
+                       &rest keys
+                       &key
+                       &allow-other-keys)
+  (apply #'parse-case-form 'case-form form keys)
+  )
+
+
+(defmethod parse-form ((op (eql 'ccase)) form
+                       &rest keys
+                       &key
+                       &allow-other-keys)
+  (apply #'parse-case-form 'ccase-form form keys)
+  )
+
+
+(defmethod parse-form ((op (eql 'ecase)) form
+                       &rest keys
+                       &key
+                       &allow-other-keys)
+  (apply #'parse-case-form 'ecase-form form keys)
+  )
+
+
+(defmethod parse-form ((op (eql 'typecase)) form
+                       &rest keys
+                       &key
+                       &allow-other-keys)
+  (apply #'parse-case-form 'typecase-form form keys)
+  )
+
+
+(defmethod parse-form ((op (eql 'etypecase)) form
+                       &rest keys
+                       &key
+                       &allow-other-keys)
+  (apply #'parse-case-form 'etypecase-form form keys)
+  )
+
+
+(defmethod parse-form ((op (eql 'ctypecase)) form
+                       &rest keys
+                       &key
+                       &allow-other-keys)
+  (apply #'parse-case-form 'ctypecase-form form keys)
+  )
+
+
+(defun parse-case-form (case-form-class
+                        form
+                        &rest keys
+                        &key
+                        enclosing-form
+                        environment
+                        macroexpand
+                        &allow-other-keys)
+  (declare (ignore macroexpand))
+  (let* ((selector (second form))
+         (clauses (cddr form))
+         (clause-forms
+          (mapcar (lambda (c)
+                    (make-instance
+                     'clause-form
+                     :selector (first c)
+                     :progn (apply #'parse-form-seq (rest c) keys)
+                     :body-env environment
+                     :top form
+                     :source c
+                     ))
+                  clauses))
+         )
+    (values
+     (make-instance case-form-class
+                    :selector (apply #'parse selector keys)
+                    :clauses clause-forms
+                    :top enclosing-form
+                    :source form
+                    )
+     environment)))
+
+
 (defmethod parse-form ((op (eql 'let)) form
                        &rest keys
                        &key
@@ -757,15 +1048,13 @@ environment : the environment in which the form is being parsed.
                                  env
                                  &aux
                                  (m-name (first macro-def))
-                                 (m-def (rest macro-def))
+                                 (m-ll   (second macro-def))
+                                 (m-body (cddr macro-def))
                                  )
            ;; ... and here is the magic of PARSE-MACRO and ENCLOSE.
            (list m-name
                  (enclose
-                  (parse-macro m-name
-                               (first m-def)
-                               (cdr m-def)
-                               env)
+                  (parse-macro m-name m-ll m-body env)
                   env)))
          )
     (let* ((macros (second form))
@@ -818,6 +1107,119 @@ environment : the environment in which the form is being parsed.
                                          keys))
             environment)
     ))
+
+
+(defmethod parse-form ((op (eql 'quote)) form ; This never gets called.
+                       &rest keys
+                       &key
+                       ;; enclosing-form
+                       environment
+                       ;; macroexpand
+                       &allow-other-keys)
+  (values (make-instance 'quote-form :value (second form))
+          environment)
+  )
+
+
+(defmethod parse-form ((op (eql 'the)) form ; This never gets called.
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand environment))
+  (values
+   (make-instance 'the-form
+                  :top enclosing-form
+                  :source form
+                  :type (second form)
+                  :expr (apply #'parse (third form) keys))
+   macroexpand)
+  )
+
+
+(defmethod parse-form ((op (eql 'setq)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       ;; macroexpand
+                       &allow-other-keys)
+  ;; Incomplete and incorrect FTTB.
+  ;; The environment changes...
+  (values
+   (make-instance 'setq-form
+                  :symbols (loop for (s) on (rest form) by #'cddr
+                                 collect s)
+                                 
+                  :values (loop for (nil v) on (rest form) by #'cddr
+                                collect (apply #'parse v keys))
+                  :top enclosing-form
+                  :source form
+                  )
+   environment)
+  )
+
+
+(defmethod parse-form ((op (eql 'setf)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       ;; macroexpand
+                       &allow-other-keys)
+  ;; Incomplete and incorrect FTTB.
+  ;; The environment changes...
+  (values
+   (make-instance 'setf-form
+                  :places (loop for (s) on (rest form) by #'cddr
+                                collect s)
+                                 
+                  :values (loop for (nil v) on (rest form) by #'cddr
+                                collect (apply #'parse v keys))
+                  :top enclosing-form
+                  :source form
+                  )
+   environment)
+  )
+
+
+;;;;---------------------------------------------------------------------------
+;;;; Definition forms.
+
+(defmethod parse-form ((op (eql 'defun)) form ; This never gets called.
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+  (destructuring-bind (defun-kwd f-name ll &body f-body)
+      form
+    (declare (ignore defun-kwd))
+    (let* ((parsed-ll (parse-ll :ordinary ll))
+           (ll-vars (ll-vars parsed-ll))
+           (f-body-env
+            (augment-environment environment
+                                 :function (list f-name)
+                                 :variable ll-vars))
+           )
+      (values
+       (make-instance 'defun-form
+                      :name f-name
+                      :lambda-list parsed-ll
+                      :top enclosing-form
+                      :source form
+                      :body-env environment
+                      :progn (apply #'parse `(block ,f-name
+                                               ,@f-body)
+                                    :environment f-body-env
+                                    keys)
+                      )
+       environment))))
+
                        
 
 ;;;;===========================================================================

@@ -23,6 +23,9 @@
    ))
 
 
+(defgeneric clast-element-subforms (ce))
+
+
 (defclass expansion-component ()
   ((expansion :accessor form-expansion
               :initarg :expansion))
@@ -267,7 +270,7 @@ applications where the operator is not a symbol or a lambda expression."))
   )
 
 
-(defclass select-form (form)
+(defclass selection-form (form)
   ((clauses :accessor form-clauses
             :initarg :clauses
             )
@@ -283,7 +286,15 @@ applications where the operator is not a symbol or a lambda expression."))
   )
 
 
-(defclass cond-form (selector-form) ())
+(defclass selector-form (selection-form)
+  ((selector :initarg :selector
+             :accessor selector-form-selection)
+   )
+  )
+
+
+
+(defclass cond-form (selection-form) ())
 
 
 (defclass case-form (selector-form) ())
@@ -374,17 +385,18 @@ applications where the operator is not a symbol or a lambda expression."))
 
 
 (defclass assignment-form (form)
-  ((place :accessor form-place
-          :initarg :place)
-   (value :accessor form-value
-          :initarg :value)
+  ((places :accessor form-places
+           :initarg :places)
+   (vals :accessor form-values
+         :initarg :values)
    )
   )
 
 
 (defclass set-form (assignment-form) ())
 
-(defclass setq-form (assignment-form) ())
+(defclass setq-form (assignment-form)
+  ((places :initarg :symbols)))
 
 (defclass setf-form (assignment-form) ())
 
@@ -402,7 +414,11 @@ applications where the operator is not a symbol or a lambda expression."))
 
 
 (defclass prog-form (vbinding-form tagbody-form)
-  ()
+  ((body-env :accessor form-body-env
+             :initarg :body-env
+             :initform () #| (make-env) |#
+             )
+   )
   )
 
 
@@ -464,8 +480,185 @@ applications where the operator is not a symbol or a lambda expression."))
 (defclass restart-bind-form (fbinding-form implicit-progn) ())
 
 
-                
-  
+;;;;---------------------------------------------------------------------------
+;;;; Definition forms.
+
+(defclass definition-form (form)
+  ((name :accessor definition-form-name
+         :initarg :name)
+   ))
+
+
+(defclass definition-lambda-list-form (definition-form implicit-progn)
+  ((lambda-list :accessor lambda-definition-form-lambda-list
+                :initarg :lambda-list
+                :initform ())
+   ))
+
+
+(defclass defvar-form (definition-form)
+  ((name :accessor defvar-form-name)
+   (value :accessor defvar-form-value
+          :initarg :value)
+   (doc-string :accessor defvar-form-doc-string
+               :initarg :doc-string
+               :initform "")
+   ))
+
+
+(defclass defparameter-form (defvar-form)
+  ((name :accessor defparameter-form-name)
+   (value :accessor defparameter-form-value
+          :initform (error "No initial value provided to DEFPARAMETER."))
+   (doc-string :accessor defparameter-form-doc-string)
+   ))
+
+
+(defclass defconstant-form (definition-form)
+  ((name :accessor defconstant-form-name)
+   (value :accessor defconstant-form-value
+          :initform (error "No initial value provided to DEFCONSTANT."))
+   (doc-string :accessor defconstant-form-doc-string)
+   ))
+
+
+(defclass defun-form (definition-lambda-list-form)
+  ((name :accessor defun-form-name)
+   (lambda-list :accessor defun-form-lambda-list)
+   ))
+
+
+(defclass defmacro-form (definition-lambda-list-form)
+  ((name :accessor defmacro-form-name)
+   (lambda-list :accessor defmacro-form-lambda-list)
+   ))
+
+
+(defclass defegeneric-form (definition-lambda-list-form)
+  ((name :accessor defgeneric-form-name)
+   (lambda-list :accessor defgeneric-form-lambda-list)
+   ))
+
+
+(defclass defmethod-form (definition-lambda-list-form)
+  ((name :accessor defgeneric-form-name)
+   (lambda-list :accessor defmethod-form-lambda-list)
+   (qualifiers :accessor defmethod-form-qualifiers
+               :initarg :qualifiers
+               :initform ())
+   ))
+
+
+(defclass define-compiler-macro-form (defmacro-form)
+  ((name :accessor define-compiler-macro-form-name)))
+
+
+(defclass define-modifier-macro-form (defmacro-form)
+  ((name :accessor define-compiler-macro-form-name)))
+
+
+(defclass defstruct-form (definition-form)
+  ((name :accessor defstruct-form-name)
+   (options :accessor defstruct-form-options
+            :initarg :options)
+   (slots :accessor defstruct-options-slots
+          :initarg :slots)
+   ))
+
+
+(defclass defclass-form (definition-form)
+  ((name :accessor defclass-form-name)
+   (superclasses :accessor defclass-form-superclasses
+                 :initarg :superclasses
+                 :initform ())
+   (options :accessor defclass-form-options
+            :initarg :options)
+   (slots :accessor defclass-options-slots
+          :initarg :slots)
+   ))
+
+
+(defclass define-method-combination-form (definition-form)
+  ((name :accessor define-method-combination-form-name)))
+
+
+(defclass define-symbol-macro-form (definition-form)
+  ((name :accessor define-symbol-macro-form-name)))
+
+
+(defclass define-setf-expander-form (definition-form)
+  ((name :accessor define-setf-expander-form-name)))
+
+
+(defclass defsetf-form (definition-form)
+  ((name :accessor defsetf-form-name)))
+
+
+(defclass defpackage-form (definition-form)
+  ((name :accessor defpackage-form-name)))
+
+
+;;;;---------------------------------------------------------------------------
+;;;; Subform extraction.
+
+(defmethod clast-element-subforms ((ce constant-form)) ())
+
+
+(defmethod clast-element-subforms ((ce symbol-ref)) ())
+
+
+(defmethod clast-element-subforms ((a application))
+  (cons (form-operator a)
+        (form-args a)))
+
+
+(defmethod clast-element-subforms ((a macro-application))
+  (let ((expansion (form-expansion a)))
+    (if expansion
+        (list expansion)
+        (cons (form-operator a)
+              (form-args a)))))
+
+
+(defmethod clast-element-subforms ((l let-form))
+  (list* (form-binds l)
+         (form-progn l)))
+
+
+(defmethod clast-element-subforms ((d declaration-form))
+  (declaration-form-declarations d))
+
+
+(defmethod clast-element-subforms ((b block-form))
+  (list* (block-name b)
+         (form-progn b)))
+
+
+(defmethod clast-element-subforms ((b progn-form))
+   (form-progn b))
+
+
+(defmethod clast-element-subforms ((f binding-form))
+  (list (form-binds f)
+        (form-progn f)))
+
+
+(defmethod clast-element-subforms ((fdf function-definition-form))
+  (list (form-function fdf)
+        (form-lambda-list fdf)
+        (form-progn fdf)))
+
+
+(defmethod clast-element-subforms ((df defun-form))
+  (list (defun-form-name df)
+        (defun-form-lambda-list df)
+        (form-progn df)))
+
+
+(defmethod clast-element-subforms ((ce list)) ce) ; Catch all method.
+
+
+(defmethod clast-element-subforms ((ce t)) ()) ; Catch all method.
 
 
 ;;;; end of file -- clast-elements.lisp --
