@@ -11,14 +11,19 @@
                (:module "utilities"
                 :components ("lambda-list-parsing")
                 :depends-on ("clast-package"))
+               (:file "clast-printing"
+                :depends-on ("clast-elements"))
                (:module "impl-dependent"
-                :depends-on ("clast-package")
+                :depends-on ("clast-elements"
+                             "clast-printing")
                 :components (
                              #+ccl
                              "clast-clozure-cl"
 
                              #+lispworks
                              "clast-lispworks"
+                             #+lispworks
+                             "clast-capi-tree"
 
                              #+allegro
                              "clast-allegro"
