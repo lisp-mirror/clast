@@ -29,7 +29,7 @@
    )
   (:default-initargs
    :title "CLAST Form Graph"
-   :best-width 400
+   :best-width 600
    :best-height 400)
   )
 
@@ -86,7 +86,8 @@
 
 
 (defun display-ast (&optional ast)
-  (display (make-instance 'clast-tree :ast (list ast))))
+  (values ast
+          (display (make-instance 'clast-tree :ast (list ast)))))
 
 
 ;;;; end of file - clast-capi-tree.lisp --
