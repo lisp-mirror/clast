@@ -60,7 +60,7 @@
 
 
 (defmethod as-string ((vr variable-ref))
-  (format nil "variable ref ~S" (form-symbol vr)))
+  (format nil "variable ref ~A" (form-symbol vr)))
 
 
 (defmethod print-object ((vr constant-ref) out)
@@ -96,7 +96,7 @@
 
 
 (defmethod as-string ((vr symbol-macro-ref))
-  (format nil "symbol macro ref ~S" (form-symbol vr)))
+  (format nil "~S symbol macro ref ~S" vr (form-symbol vr)))
 
 
 #|
@@ -121,7 +121,7 @@
 
 
 (defmethod as-string ((vr macro-name-ref))
-  (format nil "macro name ref ~S" (form-symbol vr)))
+  (format nil "macro name ref ~A" (form-symbol vr)))
 
 
 #|
