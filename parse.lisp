@@ -74,8 +74,19 @@ environment1 : the environment resulting from parsing the FORM.
 ;;;;---------------------------------------------------------------------------
 ;;;; Conditions
 
-(define-condition ast-parse-error (parse-error)
+(define-condition ast-parse-error (parse-error simple-error)
   ()
+
+  (:default-initargs
+   :format-control ""
+   :format-arguments ())
+
+  (:report
+   (lambda (ape stream)
+     (format stream
+             "CLAST: ~?"
+             (simple-condition-format-control ape)
+             (simple-condition-format-arguments ape))))
   )
 
 
@@ -84,7 +95,7 @@ environment1 : the environment resulting from parsing the FORM.
        :initarg :name))
   (:report
    (lambda (usoe stream)
-     (format stream "Unknownw operator ~S is not handled."
+     (format stream "CLAST: Unknownw operator ~S is not handled."
              (unknown-operator-name usoe))))
   )
 
@@ -93,7 +104,7 @@ environment1 : the environment resulting from parsing the FORM.
   ()
   (:report
    (lambda (usoe stream)
-     (format stream "Special form ~S not handled."
+     (format stream "CLAST: Special form ~S not handled."
              (unknown-operator-name usoe))))
   )
 
@@ -104,6 +115,7 @@ environment1 : the environment resulting from parsing the FORM.
 (declaim (ftype (function (t) boolean) is-lambda-form)
          (inline is-lambda-form)
          )
+
 
 (declaim (ftype (function (cons) t) operator)
          (ftype (function (cons) cons) arguments)
@@ -123,10 +135,16 @@ environment1 : the environment resulting from parsing the FORM.
 
 (declaim (ftype (function (t) boolean)
                 is-lambda-form
-                is-declaration)
+                is-declaration
+                is-quoted-form
+                is-compound-form)
+
          (inline is-lambda-form
-                 is-declaration)
+                 is-declaration
+                 is-quoted-form
+                 is-compound-form)
          )
+
 
 (defun is-lambda-form (form)
   (and (listp form) (eq (first form) 'lambda)))
@@ -138,6 +156,10 @@ environment1 : the environment resulting from parsing the FORM.
 
 (defun is-quoted-form (form)
   (and (listp form) (eq (first form) 'quote)))
+
+
+(defun is-compound-form (form)
+  (consp form))
 
 
 ;;;;---------------------------------------------------------------------------
@@ -259,7 +281,7 @@ environment1 : the environment resulting from parsing the FORM.
   (multiple-value-bind (kind local-p decls)
       (variable-information s environment)
     (case kind
-      ((:special :lexical nil)
+      ((:special :lexical)
         (build-variable-reference s kind local-p decls enclosing-form environment))
       
       (:constant
@@ -277,6 +299,32 @@ environment1 : the environment resulting from parsing the FORM.
                            :top enclosing-form
                            :type t)
             environment)))
+      ((nil)
+       ;; We may have three cases:
+       ;; 1 - The symbol is a variable that is "free"
+       ;; 2 - The symbol is a block name
+       ;; 3 - The symbol is a tag name
+
+       
+       (cond ((eq :block (block-information s environment)) ; Case 1.
+              (values
+               (make-instance 'block-name
+                              :symbol s
+                              :source s
+                              :top enclosing-form)
+               environment))
+
+             ((eq :tag (tag-information s environment)) ; Case 2.
+              (values
+               (make-instance 'go-tag
+                              :symbol s
+                              :source s
+                              :top enclosing-form)
+               environment))
+
+             (t ; Case 3.
+              (build-variable-reference s kind local-p decls enclosing-form environment)
+              )))
       (:otherwise
        (error "Unrecognized (implementation dependent) variable kind ~S."
               kind)
@@ -352,7 +400,8 @@ environment1 : the environment resulting from parsing the FORM.
            (:macro
             (multiple-value-bind (expanded-form expanded-p)
                 (if macroexpand
-                    (macroexpand-1 form environment)
+                    (macroexpand-1 form
+                                   (get-implementation-env environment))
                     (values form nil))
               (make-instance 'macro-application
                              :operator (make-instance 'macro-name-ref
@@ -530,13 +579,19 @@ environment1 : the environment resulting from parsing the FORM.
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore macroexpand))
+  (declare (ignore macroexpand keys))
   (let* ((tags-n-stmts (rest form))
          (tags (remove-if (complement #'symbolp) tags-n-stmts))
+         ;; (stmts (remove-if #'symbolp tags-n-stmts))
+         (ne (augment-environment environment :tag tags))
+         (parsed-forms (apply #'parse-form-seq tags-n-stmts
+                              :environment ne
+                              keys))
          )
     (values
      (make-instance 'tagbody-form
                     :tags tags
+                    :body parsed-forms
                     :source form
                     :top enclosing-form)
      environment)
@@ -844,7 +899,7 @@ environment1 : the environment resulting from parsing the FORM.
   (declare (ignore keys macroexpand))
   
   (values (make-instance 'go-form
-                         :tag (second form)
+                         :tag (apply #'parse (second form) keys)
                          :source form
                          :top enclosing-form)
           environment)
@@ -874,7 +929,7 @@ environment1 : the environment resulting from parsing the FORM.
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore enclosing-form macroexpand))
+  (declare (ignore macroexpand))
   (let* ((clauses (rest form))
          (clause-forms
           (mapcar (lambda (c)
@@ -1116,6 +1171,7 @@ environment1 : the environment resulting from parsing the FORM.
                        environment
                        ;; macroexpand
                        &allow-other-keys)
+  (declare (ignore keys))
   (values (make-instance 'quote-form :value (second form))
           environment)
   )
@@ -1128,14 +1184,14 @@ environment1 : the environment resulting from parsing the FORM.
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore macroexpand environment))
+  (declare (ignore macroexpand))
   (values
    (make-instance 'the-form
                   :top enclosing-form
                   :source form
                   :type (second form)
                   :expr (apply #'parse (third form) keys))
-   macroexpand)
+   environment)
   )
 
 
@@ -1220,7 +1276,120 @@ environment1 : the environment resulting from parsing the FORM.
                       )
        environment))))
 
-                       
+
+;;;;---------------------------------------------------------------------------
+;;;; Iteration forms (yep! You guessed it! LOOP!)
+;;;; Well: LOOP is so hairy that it goes into another file.
+
+(defun parse-dovar-form (dovar-kwd dovar-class form
+                                   &rest keys
+                                   &key
+                                   enclosing-form
+                                   environment
+                                   macroexpand
+                                   &allow-other-keys)
+  (declare (ignore dovar-kwd))
+  (destructuring-bind ((var form &optional return-form)
+                       &body body)
+      (rest form)
+    (let* ((body-decls (remove-if (complement #'is-declaration) body))
+           (body-stmts (remove-if #'is-declaration body))
+           (ne (augment-environment environment
+                                    :variable (list var)
+                                    :declare (mapcan #'rest body-decls)
+                                    )))
+      (values
+       (make-instance dovar-class
+                      :top enclosing-form
+                      :source form
+                      :body-env ne
+                      :progn (apply #'parse
+                                    `(tagbody ,@body-stmts)
+                                    :environment ne
+                                    keys)
+                      :binds (list var)
+                      :return (parse return-form
+                                     :macroexpand macroexpand
+                                     :environment ne
+                                     :enclosing-form form))
+       environment)))
+  )
+
+
+(defmethod parse-form ((op (eql 'dolist)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore enclosing-form environment macroexpand))
+
+  (apply #'parse-dovar-form 'dolist 'dolist-form form keys))
+
+
+(defmethod parse-form ((op (eql 'dotimes)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore enclosing-form environment macroexpand))
+
+  (apply #'parse-dovar-form 'dotimes 'dotimes-form form keys))
+
+
+(defmethod parse-form ((op (eql 'do)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (declare (ignore macroexpand))
+  (destructuring-bind (var-bindings
+                       (end-test-form &body results)
+                       &body body)
+      (rest form)
+    (let* ((var-bindings (listify var-bindings))
+           (decls (remove-if (complement #'is-declaration) body))
+           (stmts-tags (remove-if #'is-declaration body))
+           (ne (if (or var-bindings decls)
+                   (augment-environment environment
+                                        :variable (mapcar #'first var-bindings)
+                                        :declare (mapcan #'rest decls)
+                                        )
+                   environment))
+           )
+      (flet ((parse-binding (vb)
+               (destructuring-bind (v &optional init step)
+                   vb
+                 `(,v
+                   ,@(when init (list (apply #'parse init keys)))
+                   ,@(when step (list (apply #'parse step :environment ne keys)))
+                   )))
+             )
+        (declare (notinline parse-binding))
+        (values
+         (make-instance 'do-form
+                        :top enclosing-form
+                        :source form
+                        :body-env ne
+                        :body (apply #'parse
+                                     `(tagbody ,@stmts-tags)
+                                     :environment ne
+                                     keys)
+                        :binds (mapcar #'parse-binding var-bindings)
+                        :test (apply #'parse end-test-form
+                                     :environment ne
+                                     keys)
+                        :return (apply #'parse-form-seq
+                                       results
+                                       :environment ne
+                                       keys))
+         environment)))))
+
 
 ;;;;===========================================================================
 ;;;; Auxiliary parsing functions.
