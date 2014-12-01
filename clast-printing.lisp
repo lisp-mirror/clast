@@ -194,7 +194,18 @@ applications where the operator is not a symbol or a lambda expression."))
 
 
 ;;;; "composite" forms.
+|#
 
+(defmethod print-object ((bn block-name-ref) stream)
+  (print-unreadable-object (bn stream :identity t)
+    (format stream "BLOCK NAME REF ~S" (form-symbol bn))))
+
+
+(defmethod as-string ((bn block-name-ref))
+  (format nil "block name ~A" (form-symbol bn)))
+
+
+#|
 (defclass block-form (form implicit-progn)
   ((name :accessor form-name
          :accessor block-name
@@ -269,10 +280,19 @@ applications where the operator is not a symbol or a lambda expression."))
 (defclass macro-definition-form (function-definition-form)
   ((type :initform t))
   )
+|#
 
 
+(defmethod print-object ((gt go-tag) stream)
+  (print-unreadable-object (gt stream :identity t)
+    (format stream "GO TAG ~S" (form-symbol gt))))
 
 
+(defmethod as-string ((gt go-tag))
+  (format nil "go-tag ~A" (form-symbol gt)))
+
+
+#|
 
 (defclass go-form (form)
   ((name :accessor form-name
