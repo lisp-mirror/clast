@@ -5,17 +5,21 @@
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
 (asdf:defsystem "CLAST"
-  :components ("clast-package"
+  :components ((:file "clast-package")
                (:file "clast-elements"
                 :depends-on ("clast-package"))
                (:module "utilities"
-                :components ("lambda-list-parsing")
+                :components ("lambda-list-parsing"
+                             "kitchen-sink")
                 :depends-on ("clast-package"))
                (:file "clast-printing"
                 :depends-on ("clast-elements"))
+               (:file "env"
+                :depends-on ("clast-package"))
                (:module "impl-dependent"
                 :depends-on ("clast-elements"
-                             "clast-printing")
+                             "clast-printing"
+                             "env")
                 :components (
                              #+ccl
                              "clast-clozure-cl"
@@ -35,10 +39,14 @@
                              "clast-sbcl"
                              )
                 )
-               (:file "env"
+               (:file "env-queries"
                 :depends-on ("impl-dependent"))
                (:file "parse"
                 :depends-on ("clast-elements" "env" "utilities"))
+               (:file "parse-iteration"
+                :depends-on ("parse"))
+               (:file "tools"
+                :depends-on ("parse"))
                )
   )
 
