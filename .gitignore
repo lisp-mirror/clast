@@ -3,5 +3,7 @@
 *fasl
 *fsl
 *~
+docs
+tmp
 
 # end of file -- .gitignore --
