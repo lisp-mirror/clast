@@ -4,7 +4,7 @@
 
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
-(asdf:defsystem "CLAST"
+(asdf:defsystem :clast
   :components ((:file "clast-package")
                (:file "clast-elements"
                 :depends-on ("clast-package"))
