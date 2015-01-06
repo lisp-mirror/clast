@@ -1,7 +1,7 @@
 ;;;; -*- Mode: Lisp -*-
 
 ;;;; clast-elements.lisp --
-;;;; Code lifted from IT.BESE.ARNESI and CL-WALKER.
+;;;; Some code lifted from IT.BESE.ARNESI and CL-WALKER.
 
 ;;;; See file COPYING in main folder for licensing and copyright information.
 

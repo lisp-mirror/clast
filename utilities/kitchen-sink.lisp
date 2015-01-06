@@ -1,8 +1,10 @@
 ;;;; -*- Mode: Lisp -*-
 
 ;;;; kitchen-sink.lisp --
-;;;; Utilities that are available everywhere, but that I would make my
-;;;; library dependent on other libraries (e.g., Alexandria).
+;;;; Utilities that are available everywhere, but that I implement
+;;;; here to reduce dependencies on other libraries.
+;;;;
+;;;; See the file COPYING for license and copying information.
 
 (in-package "CLAST")
 
