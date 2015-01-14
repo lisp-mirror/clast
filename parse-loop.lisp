@@ -15,7 +15,9 @@
 ;;;; Prologue.
 
 (defparameter *loop-keywords*
-  #(:with
+  #(:named 
+
+    :with
     :initially :finally
     :for :as
 
@@ -29,6 +31,12 @@
     :return
 
     :collect :collecting
+    :nconc :nconcing
+
+    :sum :summing
+    :count :counting
+    :maximize :maximizing
+    :minimize :minimizing
 
     :when :if :unless
     :else
@@ -55,15 +63,141 @@ TUPLES) and other ones are included in the set."
   )
 
 
-(declaim (ftype (function (t) boolean) is-loop-keyword)
-         (inline is-loop-keyword))
+(defparameter *loop-arithmetic-clause-keywords*
+  #(:from :downfrom
+    :to :upto :below :above :downto
+    :by
+    ))
+
+
+(defparameter *loop-accumulation-clause-keywords*
+  #(:collect :collecting
+    :nconc :nconcing
+
+    :sum :summing
+    :count :counting 
+    :maximize :maximizing
+    :minimize :minimizing))
+
+
+(declaim (ftype (function (t) boolean)
+                is-loop-keyword
+                is-loop-arithmetic-keyword)
+         (inline is-loop-keyword
+                 is-loop-arithmetic-keyword))
 
 (defun is-loop-keyword (form)
   (and (symbolp form)
        (not (null (find form *loop-keywords*
                         :test #'string-equal)))))
 
-        
+
+(defun is-loop-arithmetic-keyword (form)
+  (and (symbolp form)
+       (not (null (find form *loop-arithmetic-clause-keywords*
+                        :test #'string-equal)))))
+
+
+(defun is-loop-accumulation-keyword (form)
+  (and (symbolp form)
+       (not (null (find form *loop-accumulation-clause-keywords*
+                        :test #'string-equal)))))
+
+
+(declaim (ftype (function (t (or symbol string)) boolean) loop-kwd=)
+         (inline loop-kwd=))
+
+(defun loop-kwd= (loop-kwd kwd)
+  (declare (type (or symbol string) kwd))
+  (and (symbolp loop-kwd)
+       (string-equal loop-kwd kwd)))
+
+
+(declaim (ftype (function ((or symbol string)) keyword) as-loop-kwd)
+         (inline as-loop-kwd))
+
+(defun as-loop-kwd (kwd)
+  (declare (type (or symbol string) kwd))
+  (intern (string kwd) "KEYWORD"))
+
+
+;;;---------------------------------------------------------------------------
+;;; loop-clause
+
+(defclass loop-clause (form) ; named, for, as, when, etc.
+  ((name :reader loop-clause-name
+         :reader form-name
+         :type (or symbol string)
+         :initarg :name
+         )
+   (subclauses :reader loop-clause-subclauses
+               :accessor subclauses
+               :type list
+               :initarg :subclauses
+               :initform ()
+               )
+   )
+  ;; :sealed class.
+  ;; No subclasses FTTB to avoid hyper-proliferation.
+
+  (:documentation "The Loop Clause Class.
+
+The class of all the LOOP clause forms.")
+  )
+
+
+(defmethod print-object ((lc loop-clause) stream)
+  (print-unreadable-object (lc stream :identity t)
+    (format stream "LOOP CLAUSE: ~A ~S"
+            (loop-clause-name lc)
+            (subclauses lc))))
+
+
+(defun is-loop-clause (x)
+  (typep x 'loop-clause))
+
+
+(defun make-loop-clause (clause-name subclauses &optional source top)
+  (make-instance 'loop-clause
+                 :name clause-name
+                 :subclauses subclauses
+                 :top top
+                 :source source
+                 ))
+
+
+(defmethod clast-element-subforms ((lc loop-clause))
+  (cons (loop-clause-name lc) (subclauses lc)))
+
+
+(defclass loop-subclause (loop-clause) ()) ; of-type, using, by etc.
+
+
+(defun is-loop-subclause (x)
+  (typep x 'loop-subclause))
+
+
+(defun make-loop-subclause (clause-name subclauses &optional source top)
+  (make-instance 'loop-subclause
+                 :name clause-name
+                 :subclauses subclauses
+                 :top top
+                 :source source))
+
+
+(defun reverse-subclauses (lc)
+  (declare (type loop-clause lc))
+  (setf (slot-value lc 'subclauses)
+        (nreverse  (slot-value lc 'subclauses)))
+  lc)
+
+
+;;;;===========================================================================
+;;;; Protocol implementation.
+
+;;;---------------------------------------------------------------------------
+;;; parse-form LOOP
+
 (defmethod parse-form ((op (eql 'loop)) form
                        &rest keys
                        &key
@@ -146,16 +280,6 @@ new-env             : a possibly augmented env.
   ))
 
 
-(declaim (ftype (function (t (or symbol string)) boolean)
-                loop-kwd=)
-         (inline loop-kwd=))
-
-(defun loop-kwd= (loop-kwd kwd)
-  (declare (type (or symbol string) kwd))
-  (and (symbolp loop-kwd)
-       (string-equal loop-kwd kwd)))
-
-
 (defmacro advance (forms-place &optional (n 1))
   `(setf ,forms-place (nthcdr ,n ,forms-place)))
 
@@ -226,7 +350,16 @@ new-env             : a possibly augmented env.
 
 
 ;;;===========================================================================
-;;; name-clause --
+;;; named-clause --
+
+(defgeneric named-clause-p (x)
+  (:method ((x loop-clause)) (eq :named (loop-clause-name x)))
+  (:method ((x t)) nil))
+
+
+(defgeneric named-clause-name (x)
+  (:method ((x loop-clause)) (first (loop-clause-subclauses x))))
+
 
 (defmethod parse-loop-clause ((loop-kwd (eql :named))
                               form
@@ -245,17 +378,94 @@ new-env             : a possibly augmented env.
              :format-control "Incorrect name for LOOP NAMED clause ~S."
              :format-arguments (list loop-name)
              ))
-    (values (list loop-kwd loop-name)
-            (cddr form)
-            (augment-environment environment
-                                 :block (list loop-name)))))
+    (values ; (list loop-kwd loop-name)
+     (make-loop-clause :named (list loop-name) enclosing-form)
+     (cddr form)
+     (augment-environment environment
+                          :block (list loop-name)))))
+
+
+;;;===========================================================================
+;;; intially/finally clause --
+
+(defmethod parse-loop-clause ((loop-kwd (eql :initially))
+                              form
+                              clauses
+                              env
+                              &rest keys
+                              &key
+                              enclosing-form
+                              macroexpand
+                              environment
+                              &allow-other-keys)
+  (declare (ignore enclosing-form environment macroexpand))
+  (parse-loop-compound-forms-clause loop-kwd form clauses env keys))
+
+
+(defmethod parse-loop-clause ((loop-kwd (eql :finally))
+                              form
+                              clauses
+                              env
+                              &rest keys
+                              &key
+                              enclosing-form
+                              macroexpand
+                              environment
+                              &allow-other-keys)
+  (declare (ignore enclosing-form environment macroexpand))
+  (parse-loop-compound-forms-clause loop-kwd form clauses env keys))
 
 
 ;;;===========================================================================
 ;;; variable-clause --
+;;; The <variable-clause>'s all deal with "variables" that are
+;;; introduced in a LOOP form.  Therefore it is best to have a
+;;; sub-element that represents such variables subclauses.
 
+(defclass loop-var-subclause (loop-subclause)
+  ((name :initarg :var
+         :reader var-form
+         :type (or symbol cons)
+         )
+   (of-type :initarg :of-type
+            :initform t
+            :reader loop-var-of-type-qualifier)
+   )
+  )
+
+
+(defun is-loop-var-subclause (x)
+  (typep x 'loop-var-subclause))
+
+
+(defun make-loop-var-subclause (name of-type subclauses &optional top source)
+  (make-instance 'loop-var-subclause
+                 :var name
+                 :of-type of-type
+                 :subclauses subclauses
+                 :top top
+                 :source source))
+
+(defmethod print-object ((lvc loop-var-subclause) stream)
+  (print-unreadable-object (lvc stream :identity t)
+    (format stream "LOOP VAR SUBCLAUSE: ~A ~S"
+            (var-form lvc)
+            (subclauses lvc))))
+
+;;;---------------------------------------------------------------------------
 ;;; with clause --
 
+(defgeneric with-clause-p (x)
+  (:method ((x loop-clause)) (eq :with (loop-clause-name x)))
+  (:method ((x t)) nil))
+
+#|
+(defgeneric named-clause-name (x)
+  (:method ((x loop-clause)) (first (loop-clause-subclauses x))))
+|#
+
+
+#| old-version-with-list
 (defmethod parse-loop-clause ((loop-kwd (eql :with))
                               form
                               clauses
@@ -287,10 +497,10 @@ new-env             : a possibly augmented env.
                    (setf var-type (second rest-form))
                    (advance rest-form 2)
                    (next-form rest-form next-token)
-                   (push :of-type with-clause)
-                   (push var-type with-clause)
-
                    )
+
+                 (push :of-type with-clause)
+                 (push var-type with-clause)
 
                  (setf vars
                        (nconc (associate-var-types var-spec var-type)
@@ -305,6 +515,9 @@ new-env             : a possibly augmented env.
                    (push '= with-clause)
                    (push var-form with-clause)
                    )
+
+                 ;; One var done, let's see if there are other ones.
+
                  (if (loop-kwd= next-token 'and)
                      (parse-var-spec :and rest-form with-clause vars)
                      (let* ((variables (mapcan #'rest vars))
@@ -320,11 +533,10 @@ new-env             : a possibly augmented env.
                ))
            )
     (parse-var-spec :with form () ())))
+|#
 
 
-;;; intially/finally clause --
-
-(defmethod parse-loop-clause ((loop-kwd (eql :initially))
+(defmethod parse-loop-clause ((loop-kwd (eql :with))
                               form
                               clauses
                               env
@@ -334,26 +546,71 @@ new-env             : a possibly augmented env.
                               macroexpand
                               environment
                               &allow-other-keys)
-  (declare (ignore enclosing-form environment macroexpand))
-  (parse-loop-compound-forms-clause loop-kwd form clauses env keys))
+  (declare (ignore enclosing-form macroexpand environment))
+  (labels ((parse-var-spec (rest-form with-subclauses vars)
+             (let ((var-spec (second rest-form))
+                   (var-type t)
+                   (var-form nil)
+                   )
+               (unless (or (symbolp var-spec)
+                           (consp var-spec))
+                 (error 'ast-parse-error
+                        :format-control "Incorrect variable name in LOOP ~S."
+                        :format-arguments (list var-spec)
+                        ))
+               (advance rest-form 2)
+
+               (let ((next-token (next-form rest-form)))
+                 (when (loop-kwd= next-token :of-type)
+                   (setf var-type (second rest-form))
+                   (advance rest-form 2)
+                   (next-form rest-form next-token)
+                   )
+
+                 (setf vars
+                       (nconc (associate-var-types var-spec var-type)
+                              vars))
+
+                 (when (loop-kwd= next-token '=)
+                   (setf var-form (apply #'parse (second rest-form)
+                                         :environment env
+                                         keys))
+                   (advance rest-form 2)
+                   (next-form rest-form next-token)
+                   )
+
+                 (push (make-loop-var-subclause
+                        var-spec
+                        var-type
+                        (and var-form
+                             (list (make-loop-subclause ':=
+                                                        (list var-form)))))
+                       with-subclauses)
+
+                 ;; One var done, let's see if there are other ones.
+
+                 (if (loop-kwd= next-token 'and)
+                     (parse-var-spec rest-form with-subclauses vars)
+                     (let* ((variables (mapcan #'rest vars))
+                            (declares (remove t vars :key #'first))
+                            (ne (augment-environment env
+                                                     :variable variables
+                                                     :declare declares))
+                            )
+                       (values (make-loop-clause :with (nreverse with-subclauses))
+                               rest-form
+                               ne)
+                       )))
+               ))
+           )
+    (parse-var-spec form () ())))
 
 
-(defmethod parse-loop-clause ((loop-kwd (eql :finally))
-                              form
-                              clauses
-                              env
-                              &rest keys
-                              &key
-                              enclosing-form
-                              macroexpand
-                              environment
-                              &allow-other-keys)
-  (declare (ignore enclosing-form environment macroexpand))
-  (parse-loop-compound-forms-clause loop-kwd form clauses env keys))
-
-
+;;;---------------------------------------------------------------------------
 ;;; for/as clause --
 ;;; The most complicated one...
+;;; I could probably break it up in all its components, but I prefer
+;;; to jumble it all together and use subfunctions.
 
 (defmethod parse-loop-clause ((loop-kwd (eql :as))
                               form
@@ -364,7 +621,7 @@ new-env             : a possibly augmented env.
                               &allow-other-keys)
   (apply #'parse-loop-clause :for form clauses env keys))
 
-
+#| old-version-with-lists
 (defmethod parse-loop-clause ((loop-kwd (eql :for))
                               form
                               clauses
@@ -666,10 +923,505 @@ new-env             : a possibly augmented env.
            )
     (parse-var-spec loop-kwd rest-form ())
     ))
+|#
+
+
+(defmethod parse-loop-clause ((loop-kwd (eql :for))
+                              form
+                              clauses
+                              env
+                              &rest keys
+                              &key
+                              enclosing-form
+                              macroexpand
+                              environment
+                              &allow-other-keys
+                              &aux
+                              (rest-form form)
+                              (next-token loop-kwd) ; EQL (first form)
+                              (subclause-vars ())
+                              (subclause-var-types ())
+                              )
+  (declare (ignore enclosing-form macroexpand environment))
+
+  ;; The variable FOR-AS-CLAUSE in each subfunction below is an
+  ;; initially empty list that contains the actual FOR clauses joined
+  ;; by AND.
+  ;; I.e., FOR V1 ... AND V2 ... AND VK
+  ;; Will eventually be kept in the variable as
+  ;;
+  ;;     (<VK ...> ... <V2 ...> <V1 ...>)
+  ;;
+  ;; Reversal of this list will happen in
+  ;; CONTINUE-PARSE-FOR-AS-SUBCLAUSE.
+
+  (labels ((parse-var-spec (for-as-kwd rest-form for-as-clause)
+             (declare (type list for-as-clause))
+             (let ((var (second rest-form))
+                   (var-type t)
+                   )
+
+
+               (assert (member (as-loop-kwd for-as-kwd)
+                               '(:for :as)
+                               :test #'eq))
+
+               ;; Ensure subclause-vars and subclause-var-types are
+               ;; empty after an 'and'.
+               (setf subclause-vars ()
+                     subclause-var-types ())
+
+               ;; Remember the clause's vars.
+               ;; This could be done just before, but it is clearer to make
+               ;; each step explicit.
+               (setf subclause-vars 
+                     (nconc (flatten var)
+                            subclause-vars))
+
+               (advance rest-form 2)
+               (next-form rest-form next-token)
+
+               (when (loop-kwd= next-token :of-type)
+                 (setf var-type (second rest-form))
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 (setf subclause-var-types
+                       (nconc (associate-var-types var var-type)
+                              subclause-var-types)
+                       )
+                 )
+
+               (push (make-loop-var-subclause var var-type ()) for-as-clause)
+
+               (case (as-loop-kwd next-token)
+                 ((:from :downfrom
+                   :to :upto :below :above :downto
+                   :by
+                   )
+                  (parse-arithmetic-subclause next-token
+                                              rest-form
+                                              for-as-clause))
+
+                 ((:in :on)
+                  (parse-list-subclause next-token
+                                        rest-form
+                                        for-as-clause))
+
+                 (:=
+                  (parse-equals-subclause next-token
+                                          rest-form
+                                          for-as-clause))
+
+                 (:across
+                  (parse-across-subclause next-token
+                                          rest-form
+                                          for-as-clause))
+
+                 (:over ; Yep.  This would be nice...
+                  (parse-over-subclause next-token
+                                        rest-form
+                                        for-as-clause))
+
+                 (:being
+                  (parse-being-subclause next-token
+                                         rest-form
+                                         for-as-clause))
+                 (t (error 'ast-parse-error
+                           :format-control "Unexpected LOOP keyword ~A."
+                           :format-arguments (list next-token)))
+                 )
+               )
+             )
+
+           (continue-parse-for-as-subclause (rest-form
+                                             next-token
+                                             for-as-clause)
+             (declare (type list for-as-clause))
+             (if (loop-kwd= next-token :and)
+                 (parse-var-spec :and rest-form for-as-clause)
+                 (let ((ne (augment-environment env
+                                                :variable subclause-vars
+                                                :declare subclause-var-types))
+                       )
+                   (values (make-loop-clause :for
+                                             (mapcar #'reverse-subclauses
+                                                     (nreverse for-as-clause)))
+                           rest-form
+                           ne)
+                   )))
+           
+           (parse-arithmetic-subclause (next-token rest-form for-as-clause)
+             (declare (type list for-as-clause))
+             (let ((value-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               ;; We always have one artihmetic subclause.
+               (push (make-loop-subclause
+                      (as-loop-kwd next-token)
+                      (list
+                       (apply #'parse value-form :environment env keys)))
+                     (subclauses var-clause))
+
+               (advance rest-form 2)
+               (next-form rest-form next-token)
+
+               ;; We may have a second...
+               (when (is-loop-arithmetic-keyword next-token)
+                 (push (make-loop-subclause
+                        next-token
+                        (list
+                         (apply #'parse (second rest-form) :environment env keys)))
+                       (subclauses var-clause))
+
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 )
+
+               ;; ... and possibly a third.
+               (when (is-loop-arithmetic-keyword next-token)
+                 (push (make-loop-subclause
+                        next-token
+                        (list
+                         (apply #'parse (second rest-form) :environment env keys)))
+                       (subclauses var-clause))
+
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 )
+
+               (continue-parse-for-as-subclause rest-form
+                                                next-token
+                                                for-as-clause))
+             )
+
+           (parse-list-subclause (next-token rest-form for-as-clause)
+             (declare (type list for-as-clause))
+             (let ((value-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               (push (make-loop-subclause
+                      next-token
+                      (list
+                       (apply #'parse value-form :environment env keys)))
+                     (subclauses var-clause))
+
+               (advance rest-form 2)
+               (next-form rest-form next-token)
+
+               (when (loop-kwd= next-token :by)
+                 (push (make-loop-subclause
+                        :by
+                        (list
+                         (apply #'parse (second rest-form) :environment env keys)))
+                       (subclauses var-clause))
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 )
+               (continue-parse-for-as-subclause rest-form
+                                                next-token
+                                                for-as-clause))
+             )
+
+           (parse-equals-subclause (next-token rest-form for-as-clause)
+             (declare (type list for-as-clause))
+             (let ((value-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+               (push (make-loop-subclause
+                      (as-loop-kwd next-token)
+                      (list
+                       (apply #'parse value-form :environment env keys)))
+                     (subclauses var-clause))
+               (advance rest-form 2)
+               (next-form rest-form next-token)
+
+               (when (loop-kwd= next-token :then)
+                 (push (make-loop-subclause
+                        :then
+                        (list
+                         (apply #'parse (second rest-form) :environment env keys)))
+                       (subclauses var-clause))
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 )
+               (continue-parse-for-as-subclause rest-form
+                                                next-token
+                                                for-as-clause))
+             )
+
+           (parse-across-subclause (next-token rest-form for-as-clause)
+             (declare (type list for-as-clause))
+             (let ((value-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               (assert (loop-kwd= next-token :across))
+
+               (push (make-loop-subclause
+                      :across
+                      (list
+                       (apply #'parse value-form :environment env keys)))
+                     (subclauses var-clause))
+               (advance rest-form 2)
+               (next-form rest-form next-token)
+               (continue-parse-for-as-subclause rest-form
+                                                next-token
+                                                for-as-clause))
+             )
+
+           (parse-over-subclause (next-token rest-form for-as-clause)
+             (parse-across-subclause next-token rest-form for-as-clause)
+             )
+
+           (parse-being-subclause (next-token rest-form for-as-clause)
+             (declare (type list for-as-clause))
+             (let ((value-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               (assert (loop-kwd= next-token :being))
+
+               ;; Pointless to add the :BEING subclause, but I do it nevertheless.
+               (push (make-loop-subclause :being ())
+                     (subclauses var-clause))
+
+               ; (push next-token for-as-clause)
+
+               (case (as-loop-kwd value-form) ; Just a misnomer carried over from above...
+                 ((:each :the)
+                  (advance rest-form 2)
+                  (next-form rest-form next-token))
+                 (t
+                  (advance rest-form)
+                  (next-form rest-form next-token))
+                 )
+
+               (case (as-loop-kwd next-token)
+                 ((:hash-key :hash-keys :hash-value :hash-values)
+                  (parse-hash-subclause next-token
+                                        rest-form
+                                        for-as-clause))
+
+                 ((:symbol :symbols
+                   :present-symbol :present-symbols
+                   :external-symbol :external-symbols)
+                  (parse-package-subclause next-token
+                                           rest-form
+                                           for-as-clause))
+
+                 ((:record :records
+                   :tuple :tuples)
+                  (parse-sql-query-subclause next-token
+                                             rest-form
+                                             for-as-clause))
+                 (t
+                  (error 'ast-parse-error
+                         :format-control "Unrecognized LOOP BEING keyword ~A."
+                         :format-arguments (list next-token)))
+                 )
+               ))
+
+           (parse-hash-subclause (next-token rest-form for-as-clause)
+             (let ((var-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               (assert (member (as-loop-kwd next-token)
+                               '(:hash-key :hash-keys :hash-value :hash-values)
+                               :test #'eq))
+
+               (let ((hash-subclause (first (subclauses var-clause)))
+                     (in-of-kwd var-form) ; Renaming...
+                     (hash-kv-subclause
+                      (make-loop-subclause (as-loop-kwd next-token) ()))
+                     )
+                 ;; (push next-token for-as-clause)
+
+                 (push hash-kv-subclause
+                       (subclauses hash-subclause))
+
+                 (case (as-loop-kwd in-of-kwd)
+                   ((:in :of)
+                    (advance rest-form 2)
+                    (next-form rest-form next-token)
+                    )
+                   (t
+                    (error 'ast-parse-error
+                           :format-control "Illigal LOOP BEING syntax at ~A."
+                           :format-arguments (list in-of-kwd))))
+
+                 (push (apply #'parse next-token :environment env keys)
+                       (subclauses hash-kv-subclause))
+
+                 (advance rest-form)
+                 (next-form rest-form next-token)
+
+                 (when (loop-kwd= next-token :using)
+                   (let ((using-subclause
+                          (make-loop-subclause :using ()))
+                         )
+                     (push using-subclause
+                           (subclauses hash-subclause))
+                     (advance rest-form)
+                     (next-form rest-form next-token)
+             
+                     (handler-case
+                         (destructuring-bind (htkv-kwd htkv-var)
+                             next-token
+                           (unless (or (loop-kwd= htkv-kwd :hash-value)
+                                       (loop-kwd= htkv-kwd :hash-key))
+                             (error 'ast-parse-error
+                                    :format-control "Illegal LOOP HASH syntax ~S."
+                                    :format-arguments (list next-token)))
+                           
+                           (push next-token (subclauses using-subclause))
+                           (push htkv-var subclause-vars)
+                           (advance rest-form)
+                           (next-form rest-form next-token)
+                           )
+                       (ast-parse-error (ape)
+                         ;; Re-signal.
+                         (error ape))
+                       (error (e)
+                         (format *error-output* "Error: CLAST:~%")
+                         (error e)))
+                     ))
+                 (reverse-subclauses hash-subclause)
+                 (continue-parse-for-as-subclause rest-form
+                                                  next-token
+                                                  for-as-clause)
+                 ))
+             )
+
+           (parse-package-subclause (next-token rest-form for-as-clause)
+             (let ((var-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               (assert (member (as-loop-kwd next-token)
+                               '(:symbol :symbols
+                                 :present-symbol :present-symbols
+                                 :external-symbol :external-symbols)
+                               :test #'eq))
+
+               (let ((pkg-subclause (first (subclauses var-clause)))
+                     (in-of-kwd var-form) ; Renaming...
+                     (pkg-var-subclause
+                      (make-loop-subclause (as-loop-kwd next-token) ()))
+                     )
+                 (push pkg-var-subclause
+                       (subclauses pkg-subclause))
+
+                 (case (as-loop-kwd in-of-kwd)
+                   ((:in :of)
+                    (advance rest-form 2)
+                    (next-form rest-form next-token)
+                    (push (apply #'parse next-token :environment env keys)
+                          (subclauses pkg-var-subclause))
+                    )
+                   )
+
+                 (advance rest-form)
+                 (next-form rest-form next-token)
+
+                 (continue-parse-for-as-subclause rest-form
+                                                  next-token
+                                                  for-as-clause))
+               )
+             )
+
+           (parse-sql-query-subclause (next-token rest-form for-as-clause)
+             (let ((var-form (second rest-form))
+                   (var-clause (first for-as-clause))
+                   )
+
+               (assert (member (as-loop-kwd next-token)
+                               '(:record :records
+                                 :tuple :tuples)
+                               :test #'eq))
+
+               (let ((sql-subclause (first (subclauses var-clause)))
+                     (in-of-kwd var-form) ; Renaming...
+                     (sql-var-subclause
+                      (make-loop-subclause (as-loop-kwd next-token) ()))
+                     )
+
+                 (push sql-var-subclause
+                       (subclauses sql-subclause))
+
+                 (case (as-loop-kwd in-of-kwd)
+                   ((:in :of)
+                    (advance rest-form 2)
+                    (next-form rest-form next-token))
+                   (t
+                    (error 'ast-parse-error
+                           :format-control "Illegal LOOP SQL syntax ~A."
+                           :format-arguments (list (second rest-form)))
+                    )
+                   )
+
+                 (push (apply #'parse next-token :environment env keys) ; Query expr.
+                       (subclauses sql-var-subclause))
+
+                 (advance rest-form)
+                 (next-form rest-form next-token)
+
+                 (when (loop-kwd= next-token :not-inside-transaction)
+                   (let ((nit-subclause
+                          (make-loop-subclause :not-inside-transaction
+                                               (list
+                                                (apply #'parse (second rest-form)
+                                                       :environment env
+                                                       keys))))
+                         )
+                     (push nit-subclause (subclauses sql-subclause))
+                     (advance rest-form 2)
+                     (next-form rest-form next-token)))
+
+                 (when (loop-kwd= next-token :get-all)
+                   (let ((ga-subclause
+                          (make-loop-subclause :get-all
+                                               (list
+                                                (apply #'parse (second rest-form)
+                                                       :environment env
+                                                       keys))))
+                         )
+                     (push ga-subclause (subclauses sql-subclause))
+                     (advance rest-form 2)
+                     (next-form rest-form next-token)))
+
+                 (reverse-subclauses sql-subclause)
+
+                 (continue-parse-for-as-subclause rest-form next-token for-as-clause)
+                 ))
+             )
+           )
+    (parse-var-spec loop-kwd rest-form ())
+    ))
 
 
 ;;;---------------------------------------------------------------------------
 ;;; main clauses
+
+#+old-version-with-list
+(defun parse-loop-compound-forms-clause (cfc-kwd form clauses env keys)
+  (declare (ignore clauses))
+  (labels ((parse-compound-forms (rest-forms compound-forms)
+             (if (and rest-forms
+                      (not (is-loop-keyword (first rest-forms))))
+                 (parse-compound-forms (rest rest-forms)
+                                       (cons (apply #'parse (first rest-forms)
+                                                    :environment env
+                                                    keys)
+                                             compound-forms))
+                 (values (cons cfc-kwd (nreverse compound-forms))
+                         rest-forms
+                         env)))
+           )
+    (parse-compound-forms (rest form) ()))
+  )
 
 
 (defun parse-loop-compound-forms-clause (cfc-kwd form clauses env keys)
@@ -682,7 +1434,8 @@ new-env             : a possibly augmented env.
                                                     :environment env
                                                     keys)
                                              compound-forms))
-                 (values (cons cfc-kwd (nreverse compound-forms))
+                 (values (make-loop-clause (as-loop-kwd cfc-kwd)
+                                           (nreverse compound-forms))
                          rest-forms
                          env)))
            )
@@ -734,8 +1487,11 @@ new-env             : a possibly augmented env.
                               another LOOP keyword (~A)."
              :format-arguments (list (second form)))
       (let ((return-clause
-             (list :return
-                   (apply #'parse (second form) keys)))
+             (make-loop-clause :return
+                               (list (apply #'parse (second form) keys)))
+             #|(list :return
+                     (apply #'parse (second form) keys))|#
+             )
             )
         (continue-loop-parsing (cddr form)
                                (cons return-clause clauses)
@@ -746,6 +1502,7 @@ new-env             : a possibly augmented env.
 
 ;;; accumulation clauses --
 
+#| Old version with list
 (defun parse-accumulation-clause (acc-kwd form clauses env keys)
   (declare (ignore clauses))
   (let* ((acc-clause (list acc-kwd))
@@ -784,6 +1541,92 @@ new-env             : a possibly augmented env.
         (next-form rest-form next-token)))
 
     (values (nreverse acc-clause)
+            rest-form
+            env)))
+|#
+
+
+(defun parse-accumulation-clause (acc-kwd form clauses env keys)
+  (declare (ignore clauses))
+  (let* ((acc-clause (make-loop-clause (as-loop-kwd acc-kwd) ()))
+         (rest-form form)
+         (next-token (first rest-form))
+         )
+    (if (null (rest form))
+        (error 'ast-parse-error
+               :format-control "Missing accumulation form after ~A."
+               :format-arguments (list acc-kwd))
+        (let ((acc-form (second rest-form)))
+          (cond ((is-loop-keyword acc-form)
+                 (error 'ast-parse-error
+                        :format-control "LOOP keyword ~A found after ~A."
+                        :format-arguments (list acc-form acc-kwd)))
+                (t
+                 (push (apply #'parse acc-form 
+                              :environment env
+                              keys)
+                       (subclauses acc-clause))
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 ))))
+
+    (when (loop-kwd= next-token :into)
+      ;; This makes things very tricky!
+      ;; The variable should be available in the various environments
+      ;; used for parsing the "stepping" functions.
+      ;; Of course this calls for a different, delayed, parsing
+      ;; routine; maybe based on saving "parsing thunks".
+
+      (push (make-loop-subclause (as-loop-kwd next-token)
+                                 (list (apply #'parse (second rest-form)
+                                              :environment env
+                                              keys)))
+            (subclauses acc-clause))
+
+      (advance rest-form 2)
+      (next-form rest-form next-token)
+
+      ;; Context dependency...
+      (case (as-loop-kwd acc-kwd)
+        ((:collect :collecting :nconc :nconcing)
+         ;; No type-spec expected.
+         (unless (or (null rest-form) ; We are done.
+                     (and (is-loop-keyword next-token) ; No <type-spec>.
+                          (not (eq (as-loop-kwd next-token) :of-type))))
+           (error 'ast-parse-error
+                  :format-control "Illegal LOOP syntax after list collection (~A)."
+                  :format-arguments (list next-token)))
+         )
+        (otherwise ; Other collection schemes: sum, count, etc.
+         (cond ((and rest-form (is-type-specifier next-token))
+                ;; Should also check that it is NIL, T, FIXNUM, FLOAT.
+                (push (make-loop-subclause :of-type
+                                           (list (apply #'parse next-token
+                                                        :environment env
+                                                        keys)))
+                      (subclauses acc-clause))
+                (advance rest-form)
+                (next-form rest-form next-token)
+                )
+               ((loop-kwd= next-token :of-type)
+                (let ((ts (second rest-form)))
+                  (unless (is-type-specifier ts)
+                    (error 'ast-parse-error
+                           :format-control "Illegal LOOP syntax: expected type specifier, ~
+                                            found ~A."
+                           :format-arguments (list ts)))
+                  (push (make-loop-subclause :of-type
+                                             (list (apply #'parse ts
+                                                          :environment env
+                                                          keys)))
+                        (subclauses acc-clause))
+                  (advance rest-form 2)
+                  (next-form rest-form next-token)))
+               ))
+        ))
+
+    (reverse-subclauses acc-clause)
+    (values acc-clause
             rest-form
             env)))
       
@@ -983,7 +1826,7 @@ new-env             : a possibly augmented env.
          )
     (if (null (rest rest-form))
         (error 'ast-parse-error
-               :format-control "Missing test form after ~A."
+               :format-control "Illigal LOOP syntax: missing test form after ~A."
                :format-arguments (list cond-kwd))
         (let ((test-form (second rest-form)))
           (cond ((is-loop-keyword test-form)
@@ -1154,32 +1997,116 @@ new-env             : a possibly augmented env.
 ;;;;===========================================================================
 ;;;; Utilities.
 
+
+;;; is-type-specifier
+
+(defun is-type-specifier (x)
+  (ignore-errors (subtypep x t)))
+
+
+;;; collect-accumulation-vars
+;;; This is a function that pre-processes a LOOP form to extract the
+;;; INTO accumulation variables (and relative types).  In fact, these
+;;; variables must be available to THEN and other LOOP forms during
+;;; execution and therefore to the parse/walk machinery.
+
+(defun collect-accumulation-vars (loop-form &optional (acc-vars ()))
+  (let ((accumulation-clause
+         (member-if #'is-loop-accumulation-keyword loop-form))
+        )
+    (if (null accumulation-clause)
+        (nreverse acc-vars)
+        (destructuring-bind (acc-kwd acc-form &rest rest-form)
+            accumulation-clause
+          (declare (ignore acc-form))
+          (if (not (loop-kwd= (first rest-form) :into))
+              (collect-accumulation-vars (rest rest-form) acc-vars)
+              (case (as-loop-kwd acc-kwd)
+                ((:collect :collecting
+                  :nconc :nconcing)
+                 (collect-accumulation-vars (cddr rest-form)
+                                            (cons (list 'list (second rest-form))
+                                                  acc-vars)))
+                ((:sum :summing
+                  :count :counting
+                  :maximize :maximizing
+                  :minimize :minimizing)
+                 (flet ((guess-type (kwd)
+                          ;; This is actually implementation
+                          ;; dependent, according to the CLHS.
+                          (case kwd
+                            ((:count :counting) `(integer 0 ,most-positive-fixnum))
+                            (t 'number)))
+                        )
+                   (destructuring-bind (acc-var &rest rest-form)
+                       (rest rest-form)
+                     (cond ((and rest-form (is-loop-keyword (first rest-form)))
+                            (collect-accumulation-vars rest-form
+                                                       (cons (list
+                                                              (guess-type (as-loop-kwd acc-kwd))
+                                                              acc-var)
+                                                             acc-vars)))
+
+                           ;; We have a type-spec.
+                           (rest-form
+                            (collect-accumulation-vars (rest rest-form)
+                                                       (cons (list
+                                                              (first rest-form)
+                                                              acc-var)
+                                                             acc-vars)))
+                           ))))
+                )))
+        )))
+        
+
 ;;; associate-var-type --
 ;;; No error checking...
 
 (defun associate-var-types (var-tree type-decls-tree)
+  "Associates the types to vars in a destructuring LOOP declaration.
+
+In LOOP you can have variable iterations of the form:
+
+FOR (v1 v2 (v31 v32 . v3r) v4) OF-TYPE (fixnum fixnum (character . T) zot)
+= (foo 42)
+
+This function would take (v1 v2 (v31 v32 . v3r) v4)
+and (t1 t2 (t31 t32 . t3r) t4) and it would return a list of
+pairs ((t1 v1) (t2 v2) (t31 v31) (t32 v32) (t3r v3r) (t4 v4)).
+
+Examples:
+
+CLAST 5 > (associate-var-types '(v1 v2 (v31 v32 . v3r) v4) '(fixnum fixnum (character ugo . T) zot))
+((FIXNUM V1) (FIXNUM V2) (CHARACTER V31) (UGO V32) (T V3R) (ZOT V4))
+
+Notes:
+
+This is an internal utility function that does not do any proper error
+checking yet.
+"
   (labels ((avt (var-tree type-decls-tree decls)
-             (cond ((consp var-tree)
-                    (cond ((null (first var-tree))
-                           (avt (rest var-tree)
-                                (rest type-decls-tree)
-                                decls))
-                          ((atom (first var-tree))
-                           (avt (rest var-tree)
-                                (rest type-decls-tree)
-                                (cons (list (first type-decls-tree)
-                                            (first var-tree))
-                                      decls)))
-                          (t
-                           (avt (rest var-tree)
-                                (rest type-decls-tree)
-                                (avt (first var-tree)
-                                     (first type-decls-tree)
-                                     decls)))
-                          ))
-                   ((null var-tree) decls)
-                   (t ; (atom var-tree)
-                    (cons (list type-decls-tree var-tree) decls))))
+             (typecase var-tree
+               (cons
+                (cond ((null (first var-tree))
+                       (avt (rest var-tree)
+                            (rest type-decls-tree)
+                            decls))
+                      ((atom (first var-tree))
+                       (avt (rest var-tree)
+                            (rest type-decls-tree)
+                            (cons (list (first type-decls-tree)
+                                        (first var-tree))
+                                  decls)))
+                      (t
+                       (avt (rest var-tree)
+                            (rest type-decls-tree)
+                            (avt (first var-tree)
+                                 (first type-decls-tree)
+                                 decls)))
+                      ))
+               (null decls)
+               (t ; (atom var-tree)
+                (cons (list type-decls-tree var-tree) decls))))
            )
     (if (eq type-decls-tree t)
         (mapcar (lambda (v) (list t v)) (flatten var-tree))
