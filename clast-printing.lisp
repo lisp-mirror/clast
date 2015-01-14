@@ -7,12 +7,20 @@
 
 (in-package "CLAST")
 
+
+(defparameter *clast-print-level* 3)
+(defparameter *clast-print-length* 4)
+
 (defgeneric as-string (form))
 
 
 (defmethod print-object ((f form) out)
-  (print-unreadable-object (f out :identity t :type t)
-    (format out "")))
+  (let ((*print-level* *clast-print-level*)
+        (*print-length* *clast-print-length*)
+        )
+    (print-unreadable-object (f out :identity t :type t)
+      (format out "~@[~A~]" (if (slot-boundp f 'source) (form-source f))))
+    ))
 
 
 (defmethod as-string ((f form))
@@ -69,7 +77,7 @@
 
 
 (defmethod as-string ((vr constant-ref))
-  (format nil "constant ref ~S" (form-symbol vr)))
+  (format nil "constant ref ~A" (form-symbol vr)))
 
 
 (defmethod print-object ((vr free-variable-ref) out)
@@ -78,7 +86,7 @@
 
 
 (defmethod as-string ((vr free-variable-ref))
-  (format nil "free variable ref ~S" (form-symbol vr)))
+  (format nil "free variable ref ~A" (form-symbol vr)))
 
 
 (defmethod print-object ((vr special-variable-ref) out)
@@ -87,7 +95,7 @@
 
 
 (defmethod as-string ((vr special-variable-ref))
-  (format nil "special variable ref ~S" (form-symbol vr)))
+  (format nil "special variable ref ~A" (form-symbol vr)))
 
 
 (defmethod print-object ((vr symbol-macro-ref) out)
@@ -96,7 +104,7 @@
 
 
 (defmethod as-string ((vr symbol-macro-ref))
-  (format nil "~S symbol macro ref ~S" vr (form-symbol vr)))
+  (format nil "~S symbol macro ref ~A" vr (form-symbol vr)))
 
 
 #|
@@ -112,7 +120,7 @@
 
 
 (defmethod as-string ((vr function-name-ref))
-  (format nil "function name ref ~S" (form-symbol vr)))
+  (format nil "function name ref ~A" (form-symbol vr)))
 
 
 (defmethod print-object ((vr macro-name-ref) out)
