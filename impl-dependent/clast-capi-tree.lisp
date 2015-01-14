@@ -49,6 +49,7 @@
                                   (t_lambda-list (string-downcase (type-of ce)))
                                   (null "NIL")
                                   (list "list-of")
+                                  (keyword (format nil "keyword :~A" ce))
                                   (symbol (format nil "symbol ~A" ce))
                                   (t (format nil "unhandled ~A" ce))))
               ; :print-function (lambda (ce) (type-of ce))
@@ -77,6 +78,7 @@
                          (t_lambda-list (type-of clast-element))
                          (null "NIL")
                          (list "list-of")
+                         (keyword (format nil "keyword :~A" clast-element))
                          (symbol (format nil "symbol ~A" clast-element))
                          (t  (format nil "unhandled ~A" clast-element)))))
 
