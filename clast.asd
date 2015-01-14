@@ -5,12 +5,18 @@
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
 (asdf:defsystem :clast
+  :author "Marco Antoniotti"
+  :license "BSD"
+  :description "CLAST is a Common Lisp library that can produce an \"abstract syntax
+tree\" of a \"form\".  Its main use is for source analysis and
+transformation, e.g., extracting the \"free variables\" list from a
+form."
   :components ((:file "clast-package")
                (:file "clast-elements"
                 :depends-on ("clast-package"))
                (:module "utilities"
-                :components ("lambda-list-parsing"
-                             "kitchen-sink")
+                :components ((:file "lambda-list-parsing")
+                             (:file "kitchen-sink"))
                 :depends-on ("clast-package"))
                (:file "clast-printing"
                 :depends-on ("clast-elements"))
@@ -22,28 +28,28 @@
                              "env")
                 :components (
                              #+ccl
-                             "clast-clozure-cl"
+                             (:file "clast-clozure-cl")
 
                              #+lispworks
-                             "clast-lispworks"
+                             (:file "clast-lispworks")
                              #+lispworks
-                             "clast-capi-tree"
+                             (:file "clast-capi-tree")
 
                              #+allegro
-                             "clast-allegro"
+                             (:file "clast-allegro")
 
                              #+cmucl
-                             "clast-cmucl"
+                             (:file "clast-cmucl")
 
                              #+sbcl
-                             "clast-sbcl"
+                             (:file "clast-sbcl")
                              )
                 )
                (:file "env-queries"
                 :depends-on ("impl-dependent"))
                (:file "parse"
                 :depends-on ("clast-elements" "env" "utilities"))
-               (:file "parse-iteration"
+               (:file "parse-loop"
                 :depends-on ("parse"))
                (:file "tools"
                 :depends-on ("parse"))

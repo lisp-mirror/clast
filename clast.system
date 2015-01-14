@@ -5,6 +5,11 @@
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
 (mk:defsystem "CLAST"
+  :licence "BSD"
+  :documentation "CLAST is a Common Lisp library that can produce an \"abstract syntax
+tree\" of a \"form\".  Its main use is for source analysis and
+transformation, e.g., extracting the \"free variables\" list from a
+form."
   :source-extension "lisp"
   :components ((:file "clast-package")
                (:file "clast-elements"
@@ -44,7 +49,7 @@
                 :depends-on ("impl-dependent"))
                (:file "parse"
                 :depends-on ("clast-elements" "env" "utilities"))
-               (:file "parse-iteration"
+               (:file "parse-loop"
                 :depends-on ("parse"))
                (:file "tools"
                 :depends-on ("parse"))
