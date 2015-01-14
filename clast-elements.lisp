@@ -1207,6 +1207,12 @@ result : a list of 'subforms' (or NIL).
         (form-progn df)))
 
 
+(defmethod clast-element-subforms ((df dovar-form))
+  (append (mapcar #'second (form-binds df))
+          (list (return-form df)
+                (form-body df))))
+
+
 (defmethod clast-element-subforms ((df do-form))
   (list (form-binds df)
         (form-test df)
