@@ -277,7 +277,22 @@ parsed-clause       : the clause just parsed.
 remaining-loop-form : the rest of the LOOP form to be parsed.
 new-env             : a possibly augmented env.
 "
-  ))
+   )
+
+  (:method ((clause-kwd symbol)
+            form ; (first form) == clause-kwd
+            clauses
+            env
+            &rest keys
+            &key
+            &allow-other-keys)
+   (if (is-loop-keyword clause-kwd)
+       (apply #'parse-loop-clause (as-loop-kwd clause-kwd) form clauses env keys)
+       (error 'ast-parse-error
+              :format-control "Illegal LOOP top level clause keyword ~A."
+              :format-arguments (list clause-kwd))
+       ))
+  )
 
 
 (defmacro advance (forms-place &optional (n 1))
@@ -1817,8 +1832,12 @@ new-env             : a possibly augmented env.
             ))))
 
 
+#| Old version with list
 (defun parse-conditional-clause (cond-kwd cond-form clauses env keys)
   (declare (ignore clauses))
+
+  (assert (member (as-loop-kwd cond-kwd) '(:if :when :unless) :test #'eq))
+
   (let* ((cond-clause (list cond-kwd))
          (rest-form cond-form)
          (next-token (first rest-form))
@@ -1826,7 +1845,7 @@ new-env             : a possibly augmented env.
          )
     (if (null (rest rest-form))
         (error 'ast-parse-error
-               :format-control "Illigal LOOP syntax: missing test form after ~A."
+               :format-control "Illegal LOOP syntax: missing test form after ~A."
                :format-arguments (list cond-kwd))
         (let ((test-form (second rest-form)))
           (cond ((is-loop-keyword test-form)
@@ -1868,6 +1887,68 @@ new-env             : a possibly augmented env.
               rest-form
               result-env))
     ))
+|#
+
+
+(defun parse-conditional-clause (cond-kwd cond-form clauses env keys)
+  (declare (ignore clauses))
+
+  (assert (member (as-loop-kwd cond-kwd) '(:if :when :unless) :test #'eq))
+
+  (let* ((cond-clause (make-loop-clause (as-loop-kwd cond-kwd) ()))
+         (rest-form cond-form)
+         (next-token (first rest-form))
+         (result-env env)
+         )
+    (if (null (rest rest-form))
+        (error 'ast-parse-error
+               :format-control "Illegal LOOP syntax: missing test form after ~A."
+               :format-arguments (list cond-kwd))
+        (let ((test-form (second rest-form)))
+          (cond ((is-loop-keyword test-form)
+                 (error 'ast-parse-error
+                        :format-control "LOOP keyword ~A found after ~A."
+                        :format-arguments (list test-form cond-kwd)))
+                (t
+                 (push (apply #'parse test-form :environment env keys)
+                       (subclauses cond-clause))
+                 (advance rest-form 2)
+                 (next-form rest-form next-token)
+                 ))))
+
+    ;; We have parsed the TEST...
+    ;; Now we parse the rest, but remembering that we are parsing a
+    ;; context-free sub-lamguage.
+
+    (multiple-value-bind (then-clauses then-rest-form ne)
+        (parse-selectable-clauses rest-form () env keys)
+      (push (make-loop-subclause :then then-clauses)
+            (subclauses cond-clause))
+      (setf rest-form then-rest-form
+            result-env ne)
+      (next-form rest-form next-token)
+      (when (loop-kwd= next-token :else)
+        (advance rest-form)
+        (next-form rest-form next-token)
+        (multiple-value-bind (else-clauses else-rest-form ne)
+            (parse-selectable-clauses rest-form () ne keys)
+          (push (make-loop-subclause :else else-clauses)
+                (subclauses cond-clause))
+          (setf rest-form else-rest-form
+                result-env ne)
+          (next-form rest-form next-token)
+          ))
+      
+      (when (loop-kwd= next-token :end)
+        (advance rest-form)
+        (next-form rest-form next-token))
+      
+      (reverse-subclauses cond-clause)
+
+      (values cond-clause
+              rest-form
+              result-env))
+    ))
   
 
 (defmethod parse-loop-clause ((loop-kwd (eql :if))
@@ -1903,6 +1984,45 @@ new-env             : a possibly augmented env.
   (parse-conditional-clause loop-kwd form clauses env keys))
 
 
+(defmethod parse-loop-clause ((loop-kwd (eql :then))
+                              form
+                              clauses
+                              env
+                              &rest keys
+                              &key
+                              &allow-other-keys
+                              )
+  (declare (ignore form clauses env))
+  (error 'ast-parse-error
+         :format-control "Illegal LOOP syntax: THEN keyword found as clause head."))
+
+
+(defmethod parse-loop-clause ((loop-kwd (eql :else))
+                              form
+                              clauses
+                              env
+                              &rest keys
+                              &key
+                              &allow-other-keys
+                              )
+  (declare (ignore form clauses env))
+  (error 'ast-parse-error
+         :format-control "Illegal LOOP syntax: ELSE keyword found as clause head."))
+
+
+(defmethod parse-loop-clause ((loop-kwd (eql :end))
+                              form
+                              clauses
+                              env
+                              &rest keys
+                              &key
+                              &allow-other-keys
+                              )
+  (declare (ignore form clauses env))
+  (error 'ast-parse-error
+         :format-control "Illegal LOOP syntax: END keyword found as clause head."))
+
+
 ;;; termination clause --
 ;;; TERM-KWD is one of WHILE, UNTIL, REPEAT, ALWAYS, NEVER, THEREIS.
 
@@ -1915,13 +2035,18 @@ new-env             : a possibly augmented env.
   (let ((rest-form form) ; Just for simmetry....
         (term-form nil)
         )
+
+    (assert (member (as-loop-kwd term-kwd)
+                    '(:while :until :repeat :always :never :thereis)
+                    :test #'eq))
+
     (advance rest-form)
     (next-form rest-form term-form) ; Yeah! Yeah! Yeah! Don't be so
                                     ; fussy dear reader.
     (multiple-value-bind (parsed-form ne)
         (apply #'parse term-form :environment env keys)
       (advance rest-form)
-      (values (list term-kwd parsed-form)
+      (values (make-loop-clause (as-loop-kwd term-kwd) (list parsed-form))
               rest-form
               ne)
       )))
