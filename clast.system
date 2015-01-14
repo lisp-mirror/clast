@@ -51,6 +51,8 @@ form."
                 :depends-on ("clast-elements" "env" "utilities"))
                (:file "parse-loop"
                 :depends-on ("parse"))
+               (:file "walk"
+                :depends-on ("parse" "parse-loop"))
                (:file "tools"
                 :depends-on ("parse"))
                )
