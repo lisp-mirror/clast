@@ -34,9 +34,6 @@ The top of the FORMs hierarchy."))
   (typep x 'form))
 
 
-(defgeneric clast-element-subforms (ce))
-
-
 (defclass expansion-component ()
   ((expansion :accessor form-expansion
               :initarg :expansion))
@@ -1115,7 +1112,7 @@ The superclass fo forms defining association to names.")
 
 (defclass simple-loop-form (iteration-form implicit-progn) ())
 
-(defun loop-form-p (x) (typep x 'loop-form))
+(defun simple-loop-form-p (x) (typep x 'simple-loop-form))
 
 
 (defclass loop-form (iteration-form vbinding-form)
