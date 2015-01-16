@@ -204,7 +204,7 @@
 
 ;;; PARSE-MACRO and ENCLOSE
 ;;;
-;;; We assume (as it is implied and or "ordered" in CLtL2 that
+;;; We assume (as it is implied and/or "ordered" in CLtL2) that
 ;;; PARSE-MACRO and ENCLOSE don't play shenanigans with the environments;
 ;;; in particular, we assume that two functions have access *only* to
 ;;; the implementation environment and not the the "extended" parsing
