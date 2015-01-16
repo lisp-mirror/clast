@@ -930,6 +930,7 @@ PROG-FORM")
 
 (defclass definition-form (form)
   ((name :accessor definition-form-name
+         :accessor form-name
          :initarg :name)
    )
   (:documentation "The DEFINITION-FORM CLass.
@@ -953,9 +954,17 @@ The superclass of all 'defining' forms that have a 'lambda list'.")
 (defun definition-lambda-list-form-p (x) (typep x 'definition-lambda-list-form))
 
 
+(defclass definition-code-form (definition-lambda-list-form implicit-progn)
+  ()
+  (:documentation "The DEFINITION-CODE-FORM CLass.
+
+The superclass of all 'defining' forms that have a 'lambda list' and a body.")
+
+(defun definition-code-form-p (x) (typep x 'definition-lambda-list-form))
+
+
 (defclass def-symbol-ref-form (definition-form)
-  ((name :accessor form-name)
-   (value :accessor form-value
+  ((value :accessor form-value
           :initarg :value)
    (doc-string :accessor doc-string
                :initarg :doc-string
@@ -996,7 +1005,7 @@ The superclass fo forms defining association to names.")
   )
 
 
-(defclass defun-form (definition-lambda-list-form)
+(defclass defun-form (definition-code-form)
   ((name :accessor defun-form-name)
    (lambda-list :accessor defun-form-lambda-list)
    )
@@ -1004,7 +1013,7 @@ The superclass fo forms defining association to names.")
   )
 
 
-(defclass defmacro-form (definition-lambda-list-form)
+(defclass defmacro-form (definition-code-form)
   ((name :accessor defmacro-form-name)
    (lambda-list :accessor defmacro-form-lambda-list)
    )
@@ -1015,13 +1024,22 @@ The superclass fo forms defining association to names.")
 (defclass defgeneric-form (definition-lambda-list-form)
   ((name :accessor defgeneric-form-name)
    (lambda-list :accessor defgeneric-form-lambda-list)
+   (options :reader defgeneric-form-options
+            :initarg :options
+            :initform ()
+            :type list)
+   (methods :reader defgeneric-form-methods
+            :initarg :methods
+            :initform ()
+            :type list)
    )
   (:documentation "The DEFGENERIC-FORM Class")
   )
 
 
-(defclass defmethod-form (definition-lambda-list-form)
-  ((name :accessor defgeneric-form-name)
+(defclass defmethod-form (definition-code-form)
+  ((name :accessor defgeneric-form-name
+         :accessor defmethod-form-name)
    (lambda-list :accessor defmethod-form-lambda-list)
    (qualifiers :accessor defmethod-form-qualifiers
                :initarg :qualifiers
@@ -1110,7 +1128,11 @@ The superclass fo forms defining association to names.")
 (defclass do*-form (do-loop-form) ())
 
 
-(defclass simple-loop-form (iteration-form implicit-progn) ())
+(defclass simple-loop-form (iteration-form implicit-progn)
+  ()
+  (:documentation "The Simple LOOP Form Class.
+
+The class that represents all 'simple' LOOP forms."))
 
 (defun simple-loop-form-p (x) (typep x 'simple-loop-form))
 
@@ -1123,6 +1145,9 @@ The superclass fo forms defining association to names.")
              :initarg :body-env
              :initform ())
    )
+  (:documentation "The LOOP Form Class.
+
+The class that represents all (extended) LOOP forms.")
   )
 
 (defun loop-form-p (x) (typep x 'loop-form))
