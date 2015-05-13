@@ -64,6 +64,9 @@ smaller and broken rocks.")
    "OPERATOR"
    "ARGUMENTS"
    "PARSE-DECLARATION"
+
+   "PARSE-STRUCT-OPTION"
+   "PARSE-LOOP-CLAUSE"
    )
 
   (:export
@@ -211,6 +214,10 @@ smaller and broken rocks.")
 
    "SIMPLE-LOOP-FORM"
    "LOOP-FORM"
+
+   "LOOP-CLAUSE"
+   "LOOP-SUBCLAUSE"
+   "LOOP-VAR-SUBCLAUSE"
    )
 
   (:export "CLAST-ELEMENT-SUBFORMS")
