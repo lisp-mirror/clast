@@ -15,6 +15,12 @@
          (nconc (flatten (first l))
                 (flatten (rest l))))
         ))
-  
+
+
+(defun ensure-lists (l)
+  (declare (type list l))
+  (mapcar (lambda (e)
+            (if (listp e) e (list e)))
+          l))
 
 ;;;; end of file -- kitchen-sink.lisp --
