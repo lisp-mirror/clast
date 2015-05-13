@@ -2,7 +2,7 @@
 
 ;;;; lambda-list-parsing.lisp --
 ;;;;
-;;;; Copyright (c) 2013-2014, Marco Antoniotti
+;;;; Copyright (c) 2013-2015, Marco Antoniotti
 ;;;; See file COPYING for more information.
 ;;;;
 ;;;; I should factor this away.
@@ -19,6 +19,7 @@
            :generic-function
            :destructuring
            :macro
+           :define-modify-macro
            ))
 
 
@@ -148,6 +149,16 @@
   )
 
 
+(defstruct (define-modify-macro-lambda-list
+            (:include ordinary-lambda-list)
+            (:constructor
+             make-define-modify-macro-lambda-list (&optional
+                                                   ordinary-vars
+                                                   optional-vars
+                                                   rest-var
+                                                   ))))
+
+
 ;;;;============================================================================
 ;;;; Lambda List Parsing.
 ;;;;
@@ -263,6 +274,34 @@
                             (not (null allow-other-keys))
                             auxvars
                             )))
+
+
+(defmethod parse-ll ((lltype (eql :define-modify-macro)) ll)
+  (multiple-value-bind (wholevar
+                        envvar
+                        reqvars
+                        optvars
+                        restvar
+                        bodyvar
+                        keyvars
+                        allow-other-keys
+                        auxvars)
+      (pll lltype ll nil)
+    ;; (declare (ignore wholevar envvar bodyvar))
+    ;; Let's try something different.
+
+    (assert (and (null wholevar)
+                 (null envvar)
+                 (null bodyvar)
+                 (null keyvars)
+                 (null allow-other-keys)
+                 (null auxvars))
+        (wholevar envvar bodyvar keyvars allow-other-keys auxvars))
+                       
+    (make-define-modify-macro-lambda-list reqvars
+                                          optvars
+                                          restvar
+                                          )))
 
 
 ;;; pll --
@@ -465,40 +504,142 @@
 ;;;---------------------------------------------------------------------------
 ;;; Utilities.
 
+
 (defgeneric ll-vars (ll))
 
+
+(defmethod ll-vars ((lli lambda-list-item)) ; Base case.
+  (let ((lli-form (lli-form lli)))
+    (if (and lli-form (consp lli-form) (= 3 (list-length lli-form)))
+        (list (lli-name lli) (third lli-form))
+        (list (lli-name lli)))))
+
+
 (defmethod ll-vars ((ll t_lambda-list))
-  (nconc (mapcar #'lli-name (ll-ordinary-vars ll))
-         (mapcar #'lli-name (ll-optional-vars ll))
-         (mapcar #'lli-name (ll-rest-var ll))
-         (mapcar #'lli-name (ll-keyword-vars ll))
-         (mapcar #'lli-name (ll-auxiliary-vars ll)))
+  (nconc (mapcan #'ll-vars (ll-ordinary-vars ll))
+         (mapcan #'ll-vars (ll-optional-vars ll))
+         (mapcan #'ll-vars (ll-rest-var ll))
+         (mapcan #'ll-vars (ll-keyword-vars ll))
+         (mapcan #'ll-vars (ll-auxiliary-vars ll)))
   )
 
 
-(defmethod ll-vars ((lli lambda-list-item))
-  (lli-name lli))
-
-
 (defmethod ll-vars ((ll destructuring-lambda-list))
-  (nconc (mapcar #'ll-vars (ll-ordinary-vars ll))
-         (mapcar #'ll-vars (ll-optional-vars ll))
-         (mapcar #'ll-vars (ll-rest-var ll))
-         (mapcar #'ll-vars (ll-keyword-vars ll))
-         (mapcar #'ll-vars (ll-auxiliary-vars ll)))
+  (nconc (mapcan #'ll-vars (ll-ordinary-vars ll))
+         (mapcan #'ll-vars (ll-optional-vars ll))
+         (mapcan #'ll-vars (ll-rest-var ll))
+         (mapcan #'ll-vars (ll-keyword-vars ll))
+         (mapcan #'ll-vars (ll-auxiliary-vars ll)))
   )
 
 
 (defmethod ll-vars ((ll macro-lambda-list))
-  (nconc (mapcar #'ll-vars (macro-lambda-list-whole-var ll))
-         (mapcar #'ll-vars (macro-lambda-list-env-var ll))
-         (mapcar #'ll-vars (ll-ordinary-vars ll))
-         (mapcar #'ll-vars (ll-optional-vars ll))
-         (mapcar #'ll-vars (ll-rest-var ll))
-         (mapcar #'ll-vars (macro-lambda-list-body-var ll))
-         (mapcar #'ll-vars (ll-keyword-vars ll))
-         (mapcar #'ll-vars (ll-auxiliary-vars ll)))
+  (nconc (mapcan #'ll-vars (macro-lambda-list-whole-var ll))
+         (mapcan #'ll-vars (macro-lambda-list-env-var ll))
+         (mapcan #'ll-vars (ll-ordinary-vars ll))
+         (mapcan #'ll-vars (ll-optional-vars ll))
+         (mapcan #'ll-vars (ll-rest-var ll))
+         (mapcan #'ll-vars (macro-lambda-list-body-var ll))
+         (mapcan #'ll-vars (ll-keyword-vars ll))
+         (mapcan #'ll-vars (ll-auxiliary-vars ll)))
   )
+
+
+(defgeneric ll-default-forms (ll))
+
+(defmethod ll-default-forms ((lli lambda-list-item)) ; Base case.
+  (let ((item-kind (lli-kind lli)))
+    (unless (eq '&reqvar item-kind) ; This excludes specialized
+                                    ; vars too.
+      (lli-form lli))))
+
+
+(defmethod ll-default-forms ((ll t_lambda-list))
+  (nconc (mapcar #'ll-default-forms (ll-ordinary-vars ll))
+         (mapcar #'ll-default-forms (ll-optional-vars ll))
+         (mapcar #'ll-default-forms (ll-rest-var ll))
+         (mapcar #'ll-default-forms (ll-keyword-vars ll))
+         (mapcar #'ll-default-forms (ll-auxiliary-vars ll))
+         ))
+
+
+(defmethod ll-default-forms ((ll macro-lambda-list))
+  (nconc (mapcar #'ll-default-forms (macro-lambda-list-whole-var ll))
+         (mapcar #'ll-default-forms (macro-lambda-list-env-var ll))
+         (mapcar #'ll-default-forms (ll-ordinary-vars ll))
+         (mapcar #'ll-default-forms (ll-optional-vars ll))
+         (mapcar #'ll-default-forms (ll-rest-var ll))
+         (mapcar #'ll-default-forms (macro-lambda-list-body-var ll))
+         (mapcar #'ll-default-forms (ll-keyword-vars ll))
+         (mapcar #'ll-default-forms (ll-auxiliary-vars ll))
+         ))
+
+
+(defgeneric count-ll-vars (kind lambda-list))
+
+
+(defmethod count-ll-vars ((kind symbol) (lli lambda-list-item))
+  1)
+
+
+(defmethod count-ll-vars ((kind (eql '&reqvar)) (ll t_lambda-list))
+  (list-length (ll-ordinary-vars ll)))
+
+(defmethod count-ll-vars ((kind (eql '&optional)) (ll t_lambda-list))
+  (list-length (ll-optional-vars ll)))
+
+(defmethod count-ll-vars ((kind (eql '&rest)) (ll t_lambda-list))
+  (if (ll-rest-var ll) 1 0))
+
+(defmethod count-ll-vars ((kind (eql '&key)) (ll t_lambda-list))
+  (list-length (ll-keyword-vars ll)))
+
+(defmethod count-ll-vars ((kind (eql '&aux)) (ll t_lambda-list))
+  (list-length (ll-auxiliary-vars ll)))
+
+(defmethod count-ll-vars ((kind (eql '&whole)) (ll t_lambda-list)) 0)
+
+(defmethod count-ll-vars ((kind (eql '&environment)) (ll t_lambda-list)) 0)
+
+(defmethod count-ll-vars ((kind (eql '&body)) (ll t_lambda-list)) 0)
+
+
+
+(defmethod count-ll-vars ((kind (eql '&reqvar)) (ll destructuring-lambda-list))
+  (reduce #'+ (mapcar #'(lambda (lli)
+                          (count-ll-vars '&reqvar lli))
+                      (ll-ordinary-vars ll))))
+
+(defmethod count-ll-vars ((kind (eql '&optional)) (ll destructuring-lambda-list))
+  (reduce #'+ (mapcar #'(lambda (lli)
+                          (count-ll-vars '&optional lli))
+                      (ll-optional-vars ll))))
+
+(defmethod count-ll-vars ((kind (eql '&rest)) (ll destructuring-lambda-list))
+  (reduce #'+ (mapcar #'(lambda (lli)
+                          (count-ll-vars '&rest lli))
+                      (ll-rest-var ll))))
+
+(defmethod count-ll-vars ((kind (eql '&key)) (ll destructuring-lambda-list))
+  (reduce #'+ (mapcar #'(lambda (lli)
+                          (count-ll-vars '&key lli))
+                      (ll-keyword-vars ll))))
+
+(defmethod count-ll-vars ((kind (eql '&aux)) (ll destructuring-lambda-list))
+  (reduce #'+ (mapcar #'(lambda (lli)
+                          (count-ll-vars '&aux lli))
+                      (ll-auxiliary-vars ll))))
+
+
+
+(defmethod count-ll-vars ((kind (eql '&whole)) (ll macro-lambda-list))
+  (if (macro-lambda-list-whole-var ll) 1 0))
+
+(defmethod count-ll-vars ((kind (eql '&environment)) (ll macro-lambda-list))
+  (list-length (macro-lambda-list-env-var ll)))
+
+(defmethod count-ll-vars ((kind (eql '&body)) (ll macro-lambda-list))
+  (if (macro-lambda-list-body-var ll) 1 0))
 
 
 ;;;; end of file -- lambda-list-parsing.lisp --
