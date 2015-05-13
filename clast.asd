@@ -47,8 +47,12 @@ form."
                 )
                (:file "env-queries"
                 :depends-on ("impl-dependent"))
-               (:file "parse"
+               (:file "parse-lambda-lists"
                 :depends-on ("clast-elements" "env" "utilities"))
+               (:file "parse"
+                :depends-on ("parse-lambda-lists"))
+               (:file "parse-defs"
+                :depends-on ("parse"))
                (:file "parse-loop"
                 :depends-on ("parse"))
                (:file "walk"
