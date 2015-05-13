@@ -9,10 +9,23 @@
 
 
 ;;;---------------------------------------------------------------------------
-;;; FORM
-;;; Top class and top 'protocol'.
+;;; CLAST-ELEMENT
+;;;
+;;; Top class just for convenience.
 
-(defclass form ()
+(defclass clast-element () ())
+
+(defun is-clast-element (x)
+  (typep x 'clast-element))
+
+
+;;;---------------------------------------------------------------------------
+;;; FORM
+;;;
+;;; Main class, other "top" classes are "mixins" (or "traits").
+;;; The main "protocol" is also named after FORM.
+
+(defclass form (clast-element)
   ((type :accessor form-type
          :initarg :type
          :initform t ; The declared or (possibly) inferred type of the form.
@@ -34,7 +47,7 @@ The top of the FORMs hierarchy."))
   (typep x 'form))
 
 
-(defclass expansion-component ()
+(defclass expansion-component (clast-element)
   ((expansion :accessor form-expansion
               :initarg :expansion))
   (:documentation "The EXPANSION-COMPONENT Class.
@@ -108,8 +121,10 @@ The class representing all 'forms' that bind 'functions'."
 
 ;;;---------------------------------------------------------------------------
 ;;; IMPLICIT-PROGN
+;;;
+;;; A "mixin" class.
 
-(defclass implicit-progn ()
+(defclass implicit-progn (clast-element)
   ((iprogn-forms :accessor form-progn
                  :accessor form-body
                  :initarg :progn
@@ -954,11 +969,12 @@ The superclass of all 'defining' forms that have a 'lambda list'.")
 (defun definition-lambda-list-form-p (x) (typep x 'definition-lambda-list-form))
 
 
-(defclass definition-code-form (definition-lambda-list-form implicit-progn)
+(defclass definition-code-form (definition-lambda-list-form)
   ()
   (:documentation "The DEFINITION-CODE-FORM CLass.
 
 The superclass of all 'defining' forms that have a 'lambda list' and a body.")
+  )
 
 (defun definition-code-form-p (x) (typep x 'definition-lambda-list-form))
 
@@ -1053,8 +1069,25 @@ The superclass fo forms defining association to names.")
   ((name :accessor define-compiler-macro-form-name)))
 
 
-(defclass define-modifier-macro-form (defmacro-form)
-  ((name :accessor define-compiler-macro-form-name)))
+(defclass define-modify-macro-form (definition-lambda-list-form)
+  ((name :accessor define-modify-macro-form-name)
+   (fun :accessor define-modify-macro-function
+        :initarg :function
+        :initform 'identity)
+   (docstring :reader define-modify-macro-function-docstring
+              :initarg :documentation
+              :initform nil)
+   )
+  (:documentation "The DEFINE-MODIFY-MACRO-FORM Class.")
+  )
+
+
+(defun is-define-modify-macro-form (x)
+  (typep x 'define-modify-macro-form))
+
+
+(defun define-modify-macro-form-p (x)
+  (typep x 'define-modify-macro-form))
 
 
 (defclass defstruct-form (definition-form)
@@ -1230,6 +1263,13 @@ result : a list of 'subforms' (or NIL).
   (list (defun-form-name df)
         (defun-form-lambda-list df)
         (form-progn df)))
+
+
+(defmethod clast-element-subforms ((df def-symbol-ref-form))
+  (list (form-name df)
+        (form-value df)
+        (doc-string df)
+        ))
 
 
 (defmethod clast-element-subforms ((df dovar-form))
