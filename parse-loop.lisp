@@ -48,6 +48,9 @@
 
     :and
 
+    :of-type
+    :into
+
     ;; ... and some extra ones...
 
     :record :records
@@ -241,7 +244,41 @@ The class of all the LOOP clause forms.")
                             &allow-other-keys
                             )
   (declare (ignore enclosing-form macroexpand))
-  (start-loop-parsing (rest loop-form) environment keys ()))
+
+  ;; Now we have a bit of kruft.
+  ;; Accumulation variables, those appearing after INTO in
+  ;; accumulation clauses should be treated "as WITH variables",
+  ;; according to the ANSI spec.
+  ;; Unfortunately, the ANSI spec is quite unclear about "where" such
+  ;; WITH declarations should go.
+  ;;
+  ;; I just decide to find such variables and have them in the initial
+  ;; environment.
+  ;;
+  ;; NB. The initial implementation below is wrong as it could "mask"
+  ;; some variables in initialization forms, as it is equivalent to
+  ;; sticking a number of WITH clauses at the beginning of the LOOP
+  ;; form.
+  ;; The way to fix it would be to have the accumulation variables
+  ;; appear only in the environments used to parse THEN forms in
+  ;; FOR/AS-EQUALS clauses and then in regular clauses.
+  ;;
+  ;; FTTB I keep the simple (and "wrong") implementation, trusting
+  ;; that it will not result in too many mishaps, given current
+  ;; programming styles.
+
+  (let* ((acc-vars-n-types
+          (collect-accumulation-vars loop-form))
+         (loop-parsing-env
+          (augment-environment
+           environment
+           :variable (mapcar #'second acc-vars-n-types)
+           :declare acc-vars-n-types))
+        )
+    (start-loop-parsing (rest loop-form)
+                        #| environment |#
+                        loop-parsing-env
+                        keys ())))
 
 
 (defgeneric parse-loop-clause (clause-kwd
@@ -386,7 +423,7 @@ new-env             : a possibly augmented env.
                               macroexpand
                               environment
                               &allow-other-keys)
-  (declare (ignore enclosing-form macroexpand))
+  (declare (ignore macroexpand keys))
   (let ((loop-name (second form)))
     (unless (symbolp loop-name)
       (error 'ast-parse-error
@@ -2163,9 +2200,13 @@ new-env             : a possibly augmented env.
                             ((:count :counting) `(integer 0 ,most-positive-fixnum))
                             (t 'number)))
                         )
-                   (destructuring-bind (acc-var &rest rest-form)
+                   (destructuring-bind (acc-var &rest rest-form
+                                                &aux (form1 (first rest-form)))
                        (rest rest-form)
-                     (cond ((and rest-form (is-loop-keyword (first rest-form)))
+                     (cond ((and rest-form
+                                 (is-loop-keyword form1)
+                                 (not (loop-kwd= form1 :of-type))
+                                 )
                             (collect-accumulation-vars rest-form
                                                        (cons (list
                                                               (guess-type (as-loop-kwd acc-kwd))
@@ -2173,12 +2214,39 @@ new-env             : a possibly augmented env.
                                                              acc-vars)))
 
                            ;; We have a type-spec.
-                           (rest-form
-                            (collect-accumulation-vars (rest rest-form)
+                           ((and rest-form
+                                 (is-loop-keyword form1)
+                                 (loop-kwd= :of-type form1))
+                            (collect-accumulation-vars (cddr rest-form)
                                                        (cons (list
-                                                              (first rest-form)
+                                                              (second rest-form)
                                                               acc-var)
                                                              acc-vars)))
+                     
+                           ;; "Short form"
+                           ((and rest-form
+                                 (not (is-loop-keyword form1)))
+                            (if (is-type-specifier form1) ; Actually T, NIL, FLOAT, FIXNUM.
+                                (collect-accumulation-vars (rest rest-form)
+                                                           (cons (list form1 acc-var)
+                                                                 acc-vars))
+                                (collect-accumulation-vars rest-form
+                                                           (cons (list
+                                                                  (guess-type
+                                                                   (as-loop-kwd acc-kwd))
+                                                                  acc-var)
+                                                                 acc-vars))
+                                ))
+                           (t
+                            ;; REST-FORM is empty; we are done.  I
+                            ;; could just return here, but it is
+                            ;; better to be symmetric for readability.
+                            (collect-accumulation-vars nil
+                                                       (cons (list
+                                                              (guess-type (as-loop-kwd acc-kwd))
+                                                              acc-var)
+                                                             acc-vars))
+                            )
                            ))))
                 )))
         )))
