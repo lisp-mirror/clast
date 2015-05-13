@@ -579,7 +579,7 @@ environment1 : the environment resulting from parsing the FORM.
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore macroexpand keys))
+  (declare (ignore macroexpand))
   (let* ((tags-n-stmts (rest form))
          (tags (remove-if (complement #'symbolp) tags-n-stmts))
          ;; (stmts (remove-if #'symbolp tags-n-stmts))
@@ -896,7 +896,7 @@ environment1 : the environment resulting from parsing the FORM.
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore keys macroexpand))
+  (declare (ignore macroexpand))
   
   (values (make-instance 'go-form
                          :tag (apply #'parse (second form) keys)
@@ -1243,43 +1243,14 @@ environment1 : the environment resulting from parsing the FORM.
 
 ;;;;---------------------------------------------------------------------------
 ;;;; Definition forms.
-
-(defmethod parse-form ((op (eql 'defun)) form ; This never gets called.
-                       &rest keys
-                       &key
-                       enclosing-form
-                       environment
-                       macroexpand
-                       &allow-other-keys)
-  (declare (ignore macroexpand))
-  (destructuring-bind (defun-kwd f-name ll &body f-body)
-      form
-    (declare (ignore defun-kwd))
-    (let* ((parsed-ll (parse-ll :ordinary ll))
-           (ll-vars (ll-vars parsed-ll))
-           (f-body-env
-            (augment-environment environment
-                                 :function (list f-name)
-                                 :variable ll-vars))
-           )
-      (values
-       (make-instance 'defun-form
-                      :name f-name
-                      :lambda-list parsed-ll
-                      :top enclosing-form
-                      :source form
-                      :body-env environment
-                      :progn (apply #'parse `(block ,f-name
-                                               ,@f-body)
-                                    :environment f-body-env
-                                    keys)
-                      )
-       environment))))
+;;;;
+;;;; In file 'parse-defs'.
 
 
 ;;;;---------------------------------------------------------------------------
 ;;;; Iteration forms (yep! You guessed it! LOOP!)
-;;;; Well: LOOP is so hairy that it goes into another file.
+;;;;
+;;;; Well: LOOP is so hairy that it goes into another file: 'parse-loop'.
 
 (defun parse-dovar-form (dovar-kwd dovar-class form
                                    &rest keys
@@ -1289,11 +1260,15 @@ environment1 : the environment resulting from parsing the FORM.
                                    macroexpand
                                    &allow-other-keys)
   (declare (ignore dovar-kwd))
-  (destructuring-bind ((var form &optional return-form)
+  (destructuring-bind ((var iter-form &optional return-form)
                        &body body)
       (rest form)
     (let* ((body-decls (remove-if (complement #'is-declaration) body))
            (body-stmts (remove-if #'is-declaration body))
+           (parsed-form (parse iter-form
+                               :macroexpand macroexpand
+                               :environment environment
+                               :enclosing-form enclosing-form))
            (ne (augment-environment environment
                                     :variable (list var)
                                     :declare (mapcan #'rest body-decls)
@@ -1307,7 +1282,7 @@ environment1 : the environment resulting from parsing the FORM.
                                     `(tagbody ,@body-stmts)
                                     :environment ne
                                     keys)
-                      :binds (list var)
+                      :binds (list (list var parsed-form))
                       :return (parse return-form
                                      :macroexpand macroexpand
                                      :environment ne
@@ -1538,8 +1513,14 @@ environment1 : the environment resulting from parsing the FORM.
                             :source d
                             ))
          )
-    ;; Now we should change 'env'.
-    (values df environment)
+    ;; Now we change 'environment'.
+    (values df
+            (augment-environment environment
+                                 :declare (mapcar (lambda (v)
+                                                    (list 'type
+                                                          (second d)
+                                                          v))
+                                                  vars)))
     ))
 
 
@@ -1559,8 +1540,14 @@ environment1 : the environment resulting from parsing the FORM.
                             :source d
                             ))
          )
-    ;; Now we should change 'env'.
-    (values df environment)
+    ;; Now we change 'environment'.
+    (values df
+            (augment-environment environment
+                                 :declare (mapcar (lambda (v)
+                                                    (list 'ftype
+                                                          (second d)
+                                                          v))
+                                                  function-names)))
     ))
 
 
