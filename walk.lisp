@@ -26,6 +26,7 @@ is not recursive.  Only the 'sequence' of subforms is mapped over.
 (defgeneric walk (clast-element &rest keys
                                 &key
                                 key ; #'identity
+                                result-type
                                 map-fun
                                 reduce-fun
                                 initial-value
@@ -39,9 +40,10 @@ corresponding to a form (i.e., CLAST-ELEMENT) using a map/reduce
 scheme.
 
 The function MAP-FUN is applied to each (sub)form and their respective
-subforms are WALKed over.  Once the traversing of subforms is
-completed the function REDUCE-FUN is applied, via REDUCE to the
-resulting sequence.  
+subforms are WALKed over.  WALK uses MAP-SUBFORMS internally,
+therefore it generates sequences (of type RESULT-TYPE) as output. Once
+the traversing of subforms is completed the function REDUCE-FUN is
+applied, via REDUCE to the resulting sequence.
 ")
   )
 
@@ -72,6 +74,15 @@ resulting sequence.
   (map result-type func
        (nconc (mapcar #'second (form-binds ce))
               (form-progn ce))))
+
+
+(defmethod map-subforms ((ce loop-clause) func
+                         &key
+                         (result-type 'list)
+                         &allow-other-keys)
+  (map result-type func
+       (loop-clause-subclauses ce))
+  )
 
                          
 ;;;;===========================================================================
