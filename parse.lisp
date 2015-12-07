@@ -277,7 +277,12 @@ environment1 : the environment resulting from parsing the FORM.
                   environment
                   macroexpand
                   enclosing-form
+                  is-bare-name
                   &allow-other-keys)
+  (declare (type list keys)
+           (type boolean macroexpand is-bare-name)
+           (ignore is-bare-name))
+
   (multiple-value-bind (kind local-p decls)
       (variable-information s environment)
     (case kind
@@ -304,7 +309,11 @@ environment1 : the environment resulting from parsing the FORM.
        ;; 1 - The symbol is a variable that is "free"
        ;; 2 - The symbol is a block name
        ;; 3 - The symbol is a tag name
-
+       ;; 4 - The symbol appears as an unevaluated 'name' in certain
+       ;;     forms (e.g., a :READER in DEFCLASS); in this case we
+       ;;     resort to the :IS-BARE-NAME parameter and the symbol is
+       ;;     just represented as a bare SYMBOL-REF.
+       ;;     (Not yet implemented and unused.)
        
        (cond ((eq :block (block-information s environment)) ; Case 1.
               (values
@@ -322,7 +331,9 @@ environment1 : the environment resulting from parsing the FORM.
                               :top enclosing-form)
                environment))
 
-             (t ; Case 3.
+             ;; (is-bare-name ...) ; Not yet implemented.
+
+             (t ; Case 1.
               (build-variable-reference s kind local-p decls enclosing-form environment)
               )))
       (:otherwise
@@ -350,6 +361,7 @@ environment1 : the environment resulting from parsing the FORM.
       ))
 
 
+;;;;---------------------------------------------------------------------------
 ;;;; parse-form --
 
 (defmethod parse-form ((op symbol) form ; FORM is (OP . ARGS)

@@ -32,7 +32,7 @@
          )
    (top :accessor form-top
         :initarg :top
-        :initform nil
+        :initform nil ; The 'enclosing form'; NIL for top-level forms.
         )
    (source :accessor form-source
            :initarg :source
@@ -42,6 +42,8 @@
 
 The top of the FORMs hierarchy."))
 
+(defun is-form (x)
+  (typep x 'form))
 
 (defun form-p (x)
   (typep x 'form))
@@ -313,6 +315,28 @@ The class also inherits the 'expansion' mixin."))
 
 (defun local-macro-application-p (x) (typep x 'local-macro-application))
 
+;;;---------------------------------------------------------------------------
+;;; Type specifiers
+
+(defclass type-specifier-form (form)
+  ((spec :accessor type-specifier-form-spec
+         :initarg :spec
+         )
+   )
+  (:documentation "The Type Specifier Form Class.
+
+The class representing 'type'specifiers.  Note that the content of the
+SPEC slot is always 'as is', i.e., not parsed.")
+  )
+
+
+(defun is-type-specifier-form (form)
+  (typep form 'type-specifier-form))
+
+
+(defun type-specifier-form-p (form)
+  (is-type-specifier-form form))
+
 
 ;;;---------------------------------------------------------------------------
 ;;; Declarations
@@ -325,7 +349,7 @@ The class also inherits the 'expansion' mixin."))
             :accessor form-resulting-environment
             :initarg :resulting-environment)
    )
-  (:documentation "The DECLARATION-FORM Class.
+  (:documentation "The Declaration Form Class.
 
 The class of all 'declarations' in Common Lisp.")
   )
@@ -684,7 +708,7 @@ Representation for MULTIPLE-VALUE-PROG1 forms.")
    )
   (:documentation "The LOAD-TIME-VALUE-FORM CLass.
 
-Reprsentation for LOAD-TIME-VALUE forms.")
+Representation for LOAD-TIME-VALUE forms.")
   )
 
 (defun load-time-value-form-p (x) (typep x 'load-time-value-form))
@@ -988,7 +1012,7 @@ The superclass of all 'defining' forms that have a 'lambda list' and a body.")
    )
   (:documentation "The DEF-SYMBOL-REF-FORM Class.
 
-The superclass fo forms defining association to names.")
+The superclass of forms defining association to names.")
   )
 
 
@@ -1094,9 +1118,18 @@ The superclass fo forms defining association to names.")
   ((name :accessor defstruct-form-name)
    (options :accessor defstruct-form-options
             :initarg :options)
-   (slots :accessor defstruct-options-slots
+   (slots :accessor defstruct-form-slots
           :initarg :slots)
-   ))
+   )
+  (:documentation "The DEFSTRUCT-FORM Class.
+
+Instances of the DEFSTRUCT-FORM class are created by parsing (via
+PARSE) structure definition forms.  The parsing of structure
+definition forms changes the environment, which is returned by PARSE
+as second value, by adding the declarations of the functions --
+constructors, copier, predicate -- that DEFSTRUCT normally
+automatically defines.")
+  )
 
 
 (defclass defclass-form (definition-form)
@@ -1104,31 +1137,43 @@ The superclass fo forms defining association to names.")
    (superclasses :accessor defclass-form-superclasses
                  :initarg :superclasses
                  :initform ())
+   (slots :accessor defclass-form-slots
+          :initarg :slots)
    (options :accessor defclass-form-options
             :initarg :options)
-   (slots :accessor defclass-options-slots
-          :initarg :slots)
-   ))
+   )
+  (:documentation "The DEFCLASS-FORM Class.")
+  )
 
 
 (defclass define-method-combination-form (definition-form)
-  ((name :accessor define-method-combination-form-name)))
+  ((name :accessor define-method-combination-form-name))
+  (:documentation "The DEFINE-METHOD-COMBINATION-FORM Class.")
+  )
 
 
 (defclass define-symbol-macro-form (definition-form)
-  ((name :accessor define-symbol-macro-form-name)))
+  ((name :accessor define-symbol-macro-form-name))
+  (:documentation "The DEFINE-SYMBOL-MACRO-FORM Class.")
+  )
 
 
 (defclass define-setf-expander-form (definition-form)
-  ((name :accessor define-setf-expander-form-name)))
+  ((name :accessor define-setf-expander-form-name))
+  (:documentation "The DEFINE-SETF-EXPANDER-FORM Class.")
+  )
 
 
 (defclass defsetf-form (definition-form)
-  ((name :accessor defsetf-form-name)))
+  ((name :accessor defsetf-form-name))
+  (:documentation "The DEFSETF-FORM Class.")
+  )
 
 
 (defclass defpackage-form (definition-form)
-  ((name :accessor defpackage-form-name)))
+  ((name :accessor defpackage-form-name))
+  (:documentation "The DEFPACKAGE-FORM Class.")
+  )
 
 
 ;;;;---------------------------------------------------------------------------

@@ -23,4 +23,13 @@
             (if (listp e) e (list e)))
           l))
 
+
+(defun generic-function-p (x)
+  (typep x 'generic-function))
+
+
+(defun is-generic-function (x)
+  (typep x 'generic-function))
+
+
 ;;;; end of file -- kitchen-sink.lisp --

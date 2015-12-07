@@ -155,8 +155,19 @@ applications where the operator is not a symbol or a lambda expression."))
 
 
 (defclass local-macro-application (macro-application) ())
+|#
+
+(defmethod print-object ((tsf type-specifier-form) stream)
+  (print-unreadable-object (tsf stream :identity t)
+    (format stream "TYPE SPEC ~S"
+            (type-specifier-form-spec tsf))))
 
 
+(defmethod as-string ((tsf type-specifier-form))
+  (format nil "type specifier ~A" (type-specifier-form-spec tsf)))
+
+
+#|
 (defclass declaration-form (form)
   ((decls :accessor declaration-form-declarations
           :initarg :declarations
@@ -616,8 +627,9 @@ applications where the operator is not a symbol or a lambda expression."))
 
 (defclass define-modifier-macro-form (defmacro-form)
   ((name :accessor define-compiler-macro-form-name)))
+|#
 
-
+#|
 (defclass defstruct-form (definition-form)
   ((name :accessor defstruct-form-name)
    (options :accessor defstruct-form-options
@@ -625,8 +637,24 @@ applications where the operator is not a symbol or a lambda expression."))
    (slots :accessor defstruct-options-slots
           :initarg :slots)
    ))
+|#
+
+(defmethod print-object ((sss struct-slot-subform) out)
+  (with-slots (name initform slot-type read-only other-options)
+      sss
+    (print-unreadable-object (sss out :identity t)
+      (format out "STRUCT SLOT FORM ~A ~A [~A ~A] ~A"
+              name initform slot-type read-only other-options))))
 
 
+(defmethod as-string ((sss struct-slot-subform))
+  (with-slots (name initform slot-type read-only other-options)
+      sss
+    (format nil "struct slot form ~A ~A [~A ~A] ~A"
+              name initform slot-type read-only other-options)))
+
+
+#|
 (defclass defclass-form (definition-form)
   ((name :accessor defclass-form-name)
    (superclasses :accessor defclass-form-superclasses
@@ -637,8 +665,29 @@ applications where the operator is not a symbol or a lambda expression."))
    (slots :accessor defclass-options-slots
           :initarg :slots)
    ))
+|#
+
+(defmethod print-object ((dss class-slot-subform) out)
+  (with-slots (name options)
+      dss
+    (print-unreadable-object (dss out :identity t)
+      (format out "CLASS SLOT FORM ~A ~@[~*~A ~A~]~:{, ~A ~A~}"
+              name
+              options
+              (first (first options))
+              (second (first options))
+              (rest options)))))
 
 
+(defmethod as-string ((dss class-slot-subform))
+  (with-slots (name options)
+      dss
+    (format nil "class slot form ~A (~D option~:P)"
+            name
+            (list-length options))))
+
+
+#|
 (defclass define-method-combination-form (definition-form)
   ((name :accessor define-method-combination-form-name)))
 
@@ -657,8 +706,10 @@ applications where the operator is not a symbol or a lambda expression."))
 
 (defclass defpackage-form (definition-form)
   ((name :accessor defpackage-form-name)))
+|#
 
 
+#|
 ;;;;---------------------------------------------------------------------------
 ;;;; Subform extraction.
 

@@ -359,6 +359,7 @@ The return values include the augmented environment.
 ;;; "post-processing" to deal with "defstruct wide" options effect.
 ;;; E.g., whether or not declare a default constructor.
 
+#|
 (defparameter *defstruct-options*
   '(:conc-name
     :constructor
@@ -433,67 +434,6 @@ The return values include the augmented environment.
          opt-name
          struct-name)
    (values opt env)))
-
-
-#|| Multiple cons options
-
-(defmethod parse-struct-option ((cons-kwd (eql :constructor))
-                                cons-options
-                                struct-name
-                                default-constructor-name
-                                env
-                                parsed-slots
-                                &aux
-                                (new-env env)
-                                (default-cons-name
-                                 (intern default-constructor-name
-                                         (symbol-package struct-name)))
-                                (do-build-default-cons t)
-                                (parsed-cons-opts ())
-                                )
-  (flet ((build-cons-key-arglist (parsed-slots)
-           (loop for (slot-name initform) in parsed-slots
-                 collect `(,slot-name ,initform) into kvs
-                 finally (return (cons '&key kvs))
-                 )) ; ASSUMES INITFORM UNPARSED (IT AIN'T SO)
-
-         (add-constructor-to-env (cons-name args-decl)
-           (setf new-env
-                 (augment-environment
-                  new-env
-                  :function (list cons-name)
-                  :declare `((ftype (function ,args-decl ,struct-name) ,cons-name))
-                  )))
-         )
-    (dolist (cons-opt cons-options)
-      (destructuring-bind (&optional (cname nil cname-supplied) arglist)
-          cons-opt
-        (cond ((and cname-supplied (null cname))
-               (setf do-build-default-cons nil)
-               (push (copy-list cons-opt) parsed-cons-opts))
-
-              ((and cname (null arglist))
-               (add-constructor-to-env cname
-                                       (build-cons-key-arglist parsed-slots))
-               (push `(:constructor ,cname)
-                     parsed-cons-opts))
-
-              ((and cname arglist)
-               (add-constructor-to-env cname arglist)
-               (push `(:constructor ,cname ,arglist)
-                     parsed-cons-opts))
-
-              ((null cname-supplied)
-               (push (copy-list cons-opt) parsed-cons-opts))
-              )))
-
-    (when do-build-default-cons
-      (add-constructor-to-env default-cons-name
-                              (build-cons-key-arglist parsed-slots)))
-    (values parsed-cons-opts
-            new-env)
-    ))
-||#
 
 
 (defmethod parse-struct-option ((cons-kwd (eql :constructor))
@@ -728,10 +668,15 @@ The return values include the augmented environment.
 
   (destructuring-bind (superstruct &rest slot-descriptions)
       include-option
+    #|
     (warn "CLAST: uninplemented and incomplete parsing of DEFSTRUCT ~
                           :include options: slot modifiers still unimplemented.")
-    (values `(:include ,superstruct ,@slot-descriptions) env)
-    ))
+    |#
+    (multiple-value-bind (parsed-slots parsed-slots-env)
+        (parse-struct-slots struct-name struct-name slot-descriptions env ()) ; The () is wrong.
+      (declare (ignore parsed-slots-env))
+      (values `(:include ,superstruct ,@parsed-slots) env)
+      )))
 
 
 (defmethod parse-struct-option ((type-kwd (eql :type))
@@ -810,6 +755,83 @@ The return values include the augmented environment.
           )))
 
 
+(defun parse-struct-slots (struct-name conc-name slots env keys)
+  (let ((new-env env)
+        (parsed-slots ())
+        )
+    (dolist (slot slots
+                  (values (nreverse parsed-slots)
+                          new-env))
+      (multiple-value-bind (parsed-slot parsed-slot-env)
+          (parse-struct-slot struct-name slot new-env keys)
+        (push parsed-slot parsed-slots)
+        
+        ;; Add the slot reader.
+        (setf new-env
+              (add-function-to-env parsed-slot-env
+                                   (default-structure-fname struct-name
+                                                            conc-name
+                                                            (first parsed-slot))
+                                   (list struct-name)
+                                   (if (getf (cddr parsed-slot) :type)
+                                       (type-specifier-form-spec
+                                        (getf (cddr parsed-slot) :type))
+                                       T
+                                       )))
+        ))))
+
+
+(defun parse-struct-slot (struct-name slot env keys)
+  (declare (type list slot)
+           (ignore struct-name))
+  (destructuring-bind (slot-name
+                       &optional
+                       (slot-initform nil slot-initform-supplied)
+                       &rest slot-keys
+                       &key
+                       (type t type-key-supplied)
+                       (read-only nil read-only-key-supplied)
+                       &allow-other-keys ; Funky code...
+                       )
+      slot
+
+    ;; Note the environment that parses initforms.
+    ;; It is necessary beacuse of verbiage in the CLHS
+    ;; about initforms as lambda list keyword
+    ;; initializers.
+
+    (let ((new-slot-keys (copy-list slot-keys))
+          (parsed-initform nil)
+          )
+      (when slot-initform-supplied
+        (setf parsed-initform
+              (apply #'parse slot-initform
+                     :environment env
+                     keys))
+        )
+      (when type-key-supplied
+        (setf (getf new-slot-keys :type)
+              (make-instance 'type-specifier-form
+                             :spec type
+                             :source type
+                             ;; :top ...
+                             ))
+        )
+      (when read-only-key-supplied
+        (setf (getf new-slot-keys :read-only)
+              (apply #'parse read-only
+                     :environment env
+                     keys))
+        )
+      (values `(,slot-name
+                ,.(when slot-initform-supplied
+                    (list parsed-initform))
+                ,.new-slot-keys)
+              env)))
+  )
+
+
+#| Moved to separate file...
 (defmethod parse-form ((op (eql 'defstruct)) form
                        &rest keys
                        &key
@@ -849,6 +871,17 @@ The return values include the augmented environment.
             (default-structure-fname struct-name
                                      struct-name
                                      ""))
+
+           (conc-name (if name-is-symbol
+                          default-conc-name
+                          (let ((conc-name-opt
+                                 (find :conc-name options :test #'eq :key #'first)))
+                            (cond ((and conc-name-opt (second conc-name-opt))
+                                   (second conc-name-opt))
+                                  (conc-name-opt '||)
+                                  (t default-conc-name))))
+                      )
+
            (default-constructor-name
             (default-structure-fname struct-name
                                      'make
@@ -864,15 +897,7 @@ The return values include the augmented environment.
                                      struct-name
                                      'p))
 
-           (conc-name (if name-is-symbol
-                          default-conc-name
-                          (let ((conc-name-opt
-                                 (find :conc-name options :test #'eq :key #'first)))
-                            (cond ((and conc-name-opt (second conc-name-opt))
-                                   (second conc-name-opt))
-                                  (conc-name-opt nil)
-                                  (t default-conc-name))))
-                      )
+  
            (parsed-opts ())
            (parsed-slots ())
            )
@@ -957,6 +982,7 @@ The return values include the augmented environment.
                      (multiple-value-bind (parsed-opt parsed-opt-env)
                          (parse-struct-option (first opt)
                                               (rest opt)
+                                              struct-name
                                               new-env
                                               parsed-slots
                                               :default-constructor-name default-constructor-name
@@ -1003,15 +1029,16 @@ The return values include the augmented environment.
                  )
                ) ; local functions.
 
-        (let ((slots-env (parse-slots slots environment)))
+        (multiple-value-bind (parsed-slots parsed-slot-env)
+            (parse-struct-slots struct-name conc-name slots environment keys)
           (multiple-value-bind (parsed-opts opts-env)
-              (parse-options options slots-env)
+              (parse-options options parsed-slot-env)
 
             (let* ((def-form
                     (make-instance 'defstruct-form
                                    :name name
                                    :options parsed-opts
-                                   :slots parsed-slots
+                                   :slots (nreverse parsed-slots)
 
                                    :source form
                                    :top enclosing-form
@@ -1020,9 +1047,10 @@ The return values include the augmented environment.
                    )
               
               (values def-form opts-env)
-              ))
-          )))
+              )))
+        ))
     ))
+|#
 
 
 #| #| Old version not yet refactored by extracting the parsing of the
@@ -1322,5 +1350,11 @@ The return values include the augmented environment.
     ))
 |#
 
+
+(defmethod clast-element-subforms ((df defstruct-form))
+  (list (defstruct-form-name df)
+        (defstruct-form-options df)
+        (defstruct-form-slots df)))
+|#
 
 ;;;; end of file -- parse-def.lisp
