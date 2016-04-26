@@ -410,11 +410,19 @@ The class of all 'ftype declaration specifiers' in Common Lisp.")
    )
   (:documentation "The ID-DECLARATION-SPECIFIER-FORM Class.
 
-The class of all 'ftype declaration specifiers' in Common Lisp.")
+The class of all 'id declaration specifiers' in Common Lisp. E.g.,
+OPTIMIZE declarations.")
   )
 
 (defun id-declaration-specifier-form-p (x)
   (typep x 'id-declaration-specifier-form))
+
+
+;;;---------------------------------------------------------------------------
+;;; Declamations
+
+(defclass declaim-form (declaration-form)
+  ())
 
 
 ;;;;---------------------------------------------------------------------------

@@ -806,6 +806,26 @@ environment1 : the environment resulting from parsing the FORM.
   )
 
 
+(defmethod parse-form ((op (eql 'declaim)) form
+                       &rest keys
+                       &key
+                       enclosing-form
+                       environment
+                       macroexpand
+                       &allow-other-keys)
+  (values
+   (make-instance 'declaim-form
+                  :top enclosing-form
+                  :source form
+                  :declarations (parse-declarations (rest form)
+                                                    environment
+                                                    enclosing-form
+                                                    macroexpand)
+                  )
+   environment)
+  )
+
+
 (defmethod parse-form ((op (eql 'flet)) form
                        &rest keys
                        &key
@@ -1698,6 +1718,27 @@ environment1 : the environment resulting from parsing the FORM.
                               macroexpand)
   (declare (ignore keys macroexpand))
   (let ((vars (rest d))
+        (df (make-instance 'id-declaration-specifier-form
+                           :id di
+                           :top enclosing-form
+                           :source d
+                           ))
+        )
+    (declare (ignore vars))
+    ;; Now we should change 'environment'.
+    (values df environment)
+    ))
+
+
+(defmethod parse-declaration ((di (eql 'declaration))
+                              d
+                              &rest keys
+                              &key
+                              environment
+                              enclosing-form
+                              macroexpand)
+  (declare (ignore keys macroexpand))
+  (let ((names (rest d))
         (df (make-instance 'id-declaration-specifier-form
                            :id di
                            :top enclosing-form
