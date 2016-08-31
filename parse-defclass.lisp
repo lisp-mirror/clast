@@ -312,7 +312,7 @@ which 'accumulates' the effects of parsing.")
                                     keys)
   (values (list :allocation option-value)
           env))
-                
+
 
 
 (defun parse-class-slots (class-name slots env keys)
@@ -331,11 +331,11 @@ which 'accumulates' the effects of parsing.")
                                                       ; It is so as
                                                       ; per ANSI.
           (push parsed-slot parsed-slots)))
-        
+
 
       ;; Now we have done a first pass over the slot options.
       ;; Add the slot readers, writers, accessors...
-    
+
       (dolist (ps parsed-slots)
         (loop with cs-opt = (class-slot-subform-options ps)
               for (so so-value) in cs-opt
@@ -360,7 +360,7 @@ which 'accumulates' the effects of parsing.")
                                        (setf ,so-value))))))
                    ))
         )
-        
+
       ;; Finally return the values.
       (values (nreverse parsed-slots)
               new-env))
@@ -410,7 +410,7 @@ which 'accumulates' the effects of parsing.")
                slot-options
                ))
             )
-        
+
         (values (make-class-slot-form
                  slot-name
                  `(,@(when allocation
@@ -428,7 +428,7 @@ which 'accumulates' the effects of parsing.")
                    ,@(when documentation
                        (list :documentation
                              (apply #'parse documentation keys)))
-                   
+
                    ,@(mapcan (lambda (r)
                                (list :reader (apply #'parse r keys)))
                              readers)
@@ -462,6 +462,10 @@ which 'accumulates' the effects of parsing.")
 
   (destructuring-bind (slot-name &rest slot-options)
       slot
+
+    ;; Loop over the options associated with a slot in order to parse
+    ;; them ...
+
     (loop for (opt opt-value) on slot-options by #'cddr
           do (multiple-value-bind (parsed-slot-option
                                    parsed-slot-env)
@@ -471,9 +475,16 @@ which 'accumulates' the effects of parsing.")
                                           env
                                           new-env
                                           keys)
-               (push parsed-slot-option
+
+	       ;; ... adding class slot options instances to a list
+
+	       (push parsed-slot-option
                      parsed-slot-options)
-               (setf new-env ; This is a NO-OP FTTB. See PARSE-CLASS-SLOT-OPTION.
+
+	       ;; The provided environment is mutated while parsing each
+	       ;; option, so it needs to be updated after each iteration.
+
+	       (setf new-env
                      parsed-slot-env)
                )
           )
