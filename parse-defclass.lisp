@@ -350,6 +350,11 @@ which 'accumulates' the effects of parsing.")
         (loop with cs-opt = (class-slot-subform-options ps)
               for (so so-value) in cs-opt
               do (case so
+
+		   ;; The declared function types are right but the runtime
+		   ;; complains by saying 'STYLE-WARNING: The definition has
+		   ;; zero args, but the FTYPE declaration has one.'
+		   
                    ((:reader :accessor)
                     (setf new-env
                           (augment-environment
