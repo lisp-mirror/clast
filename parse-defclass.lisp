@@ -170,8 +170,8 @@ which 'accumulates' the effects of parsing.")
            (loop for (initarg initform) on di-option by #'cddr
                  collect (list initarg
                                (apply #'parse initform :environment
-				      class-env keys))))
-          class-env)
+				      enclosing-env keys))))
+          enclosing-env)
   )
 
 
