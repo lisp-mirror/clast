@@ -296,6 +296,28 @@ which 'accumulates' the effects of parsing.")
           class-env))
 
 
+(defmethod parse-class-slot-option ((option (eql :documentation))
+                                    option-value
+                                    class-name
+                                    slot-name
+                                    enclosing-env
+                                    class-env
+                                    keys)
+  (values (list :documentation option-value)
+          class-env))
+
+
+(defmethod parse-class-slot-option ((option (eql :initform))
+                                    option-value
+                                    class-name
+                                    slot-name
+                                    enclosing-env
+                                    class-env
+                                    keys)
+  (values (list :init-form option-value)
+          enclosing-env))
+
+
 (defun parse-class-slots (class-name slots env keys)
   (let ((new-env env)
         (parsed-slots ())
