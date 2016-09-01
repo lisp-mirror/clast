@@ -169,8 +169,9 @@ which 'accumulates' the effects of parsing.")
            di-kwd
            (loop for (initarg initform) on di-option by #'cddr
                  collect (list initarg
-                               (apply #'parse initform :environment env keys))))
-          env)
+                               (apply #'parse initform :environment
+				      class-env keys))))
+          class-env)
   )
 
 
@@ -186,9 +187,9 @@ which 'accumulates' the effects of parsing.")
   (values (make-class-option-form
            doc-kwd
            (list (apply #'parse (first doc-option)
-                        :environment env
+                        :environment class-env
                         keys)))
-          env)
+          class-env)
   )
 
 
@@ -204,9 +205,9 @@ which 'accumulates' the effects of parsing.")
   (values (make-class-option-form
            metac-kwd
            (list (apply #'parse (first metac-option)
-                        :environment env
+                        :environment class-env
                         keys)))
-          env)
+          class-env)
   )
 
 
@@ -300,7 +301,7 @@ which 'accumulates' the effects of parsing.")
                                     class-env
                                     keys)
   (values (list :initarg option-value)
-          env))
+          class-env))
 
 
 (defmethod parse-class-slot-option ((option (eql :allocation))
@@ -311,8 +312,7 @@ which 'accumulates' the effects of parsing.")
                                     class-env
                                     keys)
   (values (list :allocation option-value)
-          env))
-
+          class-env))
 
 
 (defun parse-class-slots (class-name slots env keys)
