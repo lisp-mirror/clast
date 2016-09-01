@@ -90,35 +90,6 @@
         (class-option-subform-spec sos)))
 
 
-;;;----------------------------------------------------------------------------
-;;; defclass-form
-
-(defparameter *defclass-options*
-  '(:default-initargs
-    :documentation
-    :metaclass))
-
-
-(defparameter *defclass-slot-options*
-  '(:reader
-    :writer
-    :accessor
-    :allocation
-    :initarg
-    :initform
-    :type
-    :documentation
-    ))
-
-#|
-(defun add-function-to-env (env fname args-decl return-type)
-  (augment-environment
-   env
-   :function (list fname)
-   :declare `((ftype (function ,args-decl ,return-type) ,fname))
-   ))
-|#
-
 ;;;---------------------------------------------------------------------------
 ;;; parse-class-option, parse-class-options
 
