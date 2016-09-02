@@ -14,6 +14,9 @@
 
 	       (:file "suites"
 		:depends-on ("clast-tests-package"))
+
+	       (:file "parse-defclass-suite"
+		:depends-on ("suites"))
                )
   )
 

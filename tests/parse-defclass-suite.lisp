@@ -6,8 +6,8 @@
 
 (in-package :clast-tests)
 
-(def-suite :parse)
+(in-suite :parse-defclass)
 
-(def-suite :parse-defclass :in :parse)
+(test first-test (is (fboundp 'run)))
 
 ;;;; end of file -- suites.lisp --
