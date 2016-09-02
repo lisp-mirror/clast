@@ -314,8 +314,11 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
-  (values (list :init-form option-value)
-          enclosing-env))
+  (multiple-value-bind (element env)
+      (parse option-value enclosing-env keys)
+
+    (values (list :initform element
+		  env))))
 
 
 (defun parse-class-slots (class-name slots env keys)
