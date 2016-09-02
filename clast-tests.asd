@@ -11,6 +11,9 @@
   :pathname "tests/"
   :depends-on ("CLAST" "FIVEAM")
   :components ((:file "clast-tests-package")
+
+	       (:file "suites"
+		:depends-on ("clast-tests-package"))
                )
   )
 
