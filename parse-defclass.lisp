@@ -351,7 +351,7 @@ which 'accumulates' the effects of parsing.")
 		   ;; complains by saying 'STYLE-WARNING: The definition has
 		   ;; zero args, but the FTYPE declaration has one.'
 		   
-                   ((:reader :accessor)
+                   (:reader
                     (setf new-env
                           (augment-environment
                            new-env
@@ -360,17 +360,34 @@ which 'accumulates' the effects of parsing.")
                                                        ,(slot-declared-type cs-opt))
                                              ,so-value)))))
                    (:writer
-                    (setf new-env
+		    (setf new-env
+                          (augment-environment
+                           new-env
+                           :function (list so-value)
+                           :declare `((ftype
+                                       (function (,(slot-declared-type cs-opt)
+                                                  ,class-name)
+                                                 ,(slot-declared-type cs-opt))
+                                       ,so-value)))))
+		   (:accessor
+		    (setf new-env
+                          (augment-environment
+                           new-env
+                           :function (list so-value)
+                           :declare `((ftype (function (,class-name)
+                                                       ,(slot-declared-type cs-opt))
+                                             ,so-value))))
+		    (setf new-env
                           (augment-environment
                            new-env
                            :function (list `(setf ,so-value))
                            :declare `((ftype
                                        (function (,(slot-declared-type cs-opt)
-                                                  ,class-name)
+						   ,class-name)
                                                  ,(slot-declared-type cs-opt))
                                        (setf ,so-value))))))
-                   ))
-        )
+		   ))
+	)
 
       ;; Finally return the values.
       (values (nreverse parsed-slots)
