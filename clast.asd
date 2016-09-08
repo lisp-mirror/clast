@@ -87,4 +87,20 @@ form."
                )
   )
 
+(asdf:defsystem :clast-tests
+    :author "Marco Antoniotti"
+    :license "BSD"
+    :description "Tests for the CLAST library"
+    :pathname "tests/"
+    :depends-on (:clast :fiveam)
+    :components ((:file "clast-tests-package")
+
+		 (:file "suites"
+		  :depends-on ("clast-tests-package"))
+
+		 (:file "parse-defclass-suite"
+		  :depends-on ("suites"))
+		 )
+    )
+
 ;;;; end of file -- clast.asd --
