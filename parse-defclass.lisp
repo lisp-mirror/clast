@@ -459,6 +459,8 @@ which 'accumulates' the effects of parsing.")
           (parse-class-options name options parsed-slots-env keys)
         (values (make-instance 'defclass-form
                                :name name
+			       :top enclosing-form
+			       :source form
                                :superclasses superclasses
                                :slots parsed-slots
                                :options parsed-opts)
