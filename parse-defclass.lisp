@@ -157,9 +157,9 @@ which 'accumulates' the effects of parsing.")
   (declare (ignore parsed-slots))
   (values (make-class-option-form
            doc-kwd
-           (list (apply #'parse (first doc-option)
-                        :environment class-env
-                        keys)))
+           (apply #'parse (first doc-option)
+		  :environment class-env
+		  keys))
           class-env)
   )
 
@@ -175,9 +175,9 @@ which 'accumulates' the effects of parsing.")
   (declare (ignore parsed-slots))
   (values (make-class-option-form
            metac-kwd
-           (list (apply #'parse (first metac-option)
-                        :environment class-env
-                        keys)))
+	   (apply #'parse (first metac-option)
+		  :environment class-env
+		  keys))
           class-env)
   )
 
