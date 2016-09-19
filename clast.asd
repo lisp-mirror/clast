@@ -100,6 +100,9 @@ form."
 
 		 (:file "parse-defclass-suite"
 		  :depends-on ("suites"))
+
+		 (:file "parse-defs-suite"
+		  :depends-on ("suites"))
 		 )
     )
 
