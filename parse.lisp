@@ -947,6 +947,8 @@ environment1 : the environment resulting from parsing the FORM.
                        &allow-other-keys)
   (declare (ignore enclosing-form macroexpand))
   (values (make-instance 'if-form
+			 :top enclosing-form
+			 :source form
                          :condition (apply #'parse (second form) keys)
                          :then  (apply #'parse (third form) keys)
                          :else  (apply #'parse (fourth form) keys)
