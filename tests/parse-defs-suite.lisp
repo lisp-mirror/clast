@@ -57,7 +57,7 @@
 	(clast:parse input)
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
-      (is (eql 'defun-form (type-of element)))
+      (is (eql 'clast::defun-form (type-of element)))
       ;; ... the environment is correctly augmented
       (is (clast:function-information 'id env))
       (let ((name
@@ -70,12 +70,11 @@
 	     (clast::form-progn element)))
 	;; ... the function name is correctly noted
 	(is (eql 'id name))
-	;; ... as its lambda list
+	;; ... as lambda list
 	(is (eql 'clast::ordinary-lambda-list (type-of lambda-list)))
 	;; ... its body environment
 	(is (eql :lexical (clast:variable-information 'x body-env)))
 	(is (eql :function (clast:function-information 'id body-env)))
-	(print (function-information 'id body-env))
 	;; ... and subforms
 	(is (eql 'clast::block-form (type-of progn-forms)))
 	;; TODO: Related types are not recorded correctly on SBCL. The
@@ -110,7 +109,6 @@
       (is (eql 'clast::defmacro-form (type-of element)))
       ;; ... the environment is correctly augmented
       (is (eql :macro (clast:function-information 'id env)))
-      ;; ... as its lambda list, body environment and subforms
       (let ((name
 	     (clast::defmacro-form-name element))
 	    (lambda-list
@@ -121,13 +119,41 @@
 	     (clast::form-progn element)))
 	;; ... the macro name is correctly noted
 	(is (eql 'id name))
-	;; ... as its lambda list
+	;; ... as the lambda list
 	(is (eql 'clast::macro-lambda-list (type-of lambda-list)))
 	;; ... its body environment
 	(is (eql :lexical (clast:variable-information 'x body-env)))
 	(is (eql :macro (clast:function-information 'id body-env)))
 	;; ... and subforms
 	(is (eql 'clast::block-form (type-of progn-forms)))
+	))))
+
+
+(test defgeneric
+  ;; GIVEN: a generic function declartion
+  (let ((input
+	 '(defgeneric id (x)
+	   (:method ((x fixnum)) x))))
+    ;; WHEN: the declaration is parsed
+    (multiple-value-bind (element env)
+	(clast:parse input)
+      ;; THEN: parsing returns a CLAST-ELEMENT instance of the
+      ;; appropriate type ...
+      (is (eql 'clast::defgeneric-form (type-of element)))
+      ;; ... the environment is correctly augmented
+      (is (clast:function-information 'id env))
+      (let ((name
+	     (clast::defgeneric-form-name element))
+	    (lambda-list
+	     (clast::defgeneric-form-lambda-list element)))
+	;; ... the function name is correctly noted
+	(is (eql 'id name))
+	;; ... as lambda list
+	(is (eql 'clast::specialized-lambda-list (type-of lambda-list)))
+	;; TODO: the body environment and implicit progned forms are
+	;; not added to the element during parsing at the moment.
+	;; TODO: add checking of methods, SBCL crashes when trying to
+	;; invoke clast:parse on a defgeneric with methods at the moment
 	))))
 
 
