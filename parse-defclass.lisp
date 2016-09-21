@@ -45,17 +45,6 @@
   (is-class-slot-subform x))
 
 
-(defun make-class-slot-form (slot-name options)
-  (make-instance 'class-slot-subform
-         :slot-name slot-name
-         :slot-options options
-         ))
-
-
-(defun make-class-slot-form* (slot-name &rest options)
-  (make-class-slot-form slot-name options))
-
-
 (defmethod clast-element-subforms ((sos class-slot-subform))
   (list (class-slot-subform-name sos)
         (class-slot-subform-options sos)
@@ -321,7 +310,8 @@ which 'accumulates' the effects of parsing.")
 		  env))))
 
 
-(defun parse-class-slots (class-name slots env keys)
+(defun parse-class-slots (class-name class-form slots env keys)
+  
   (let ((new-env env)
         (parsed-slots ())
         )
@@ -333,11 +323,9 @@ which 'accumulates' the effects of parsing.")
            )
       (dolist (slot slots)
         (multiple-value-bind (parsed-slot parsed-slot-env)
-            (parse-class-slot class-name slot env keys) ; Check the ENV argument!
-                                                      ; It is so as
-                                                      ; per ANSI.
+	    ;; Check the ENV argument! It is so as per ANSI.
+            (parse-class-slot class-name class-form slot env keys) 
           (push parsed-slot parsed-slots)))
-
 
       ;; Now we have done a first pass over the slot options.
       ;; Add the slot readers, writers, accessors...
@@ -395,11 +383,11 @@ which 'accumulates' the effects of parsing.")
     ))
 
 
-(defun parse-class-slot (class-name slot env keys
-                                    &aux
-                                    parsed-slot-options
-                                    (new-env env)
-                                    )
+(defun parse-class-slot (class-name class-form slot env keys
+			                       &aux
+                                               parsed-slot-options
+                                               (new-env env)
+                                               )
   (declare (type list slot))
 
   (destructuring-bind (slot-name &rest slot-options)
@@ -431,7 +419,12 @@ which 'accumulates' the effects of parsing.")
                )
           )
 
-    (values (make-class-slot-form slot-name (nreverse parsed-slot-options))
+    (values (make-instance 'class-slot-subform
+			   :slot-name slot-name
+			   :slot-options (nreverse
+					  parsed-slot-options)
+			   :source slot
+			   :top class-form)
             new-env)
     ))
 
@@ -454,7 +447,7 @@ which 'accumulates' the effects of parsing.")
     (declare (ignore dc-kwd))
 
     (multiple-value-bind (parsed-slots parsed-slots-env)
-        (parse-class-slots name slots environment keys)
+        (parse-class-slots name form slots environment keys)
       (multiple-value-bind (parsed-opts parsed-opts-env)
           (parse-class-options name options parsed-slots-env keys)
         (values (make-instance 'defclass-form
