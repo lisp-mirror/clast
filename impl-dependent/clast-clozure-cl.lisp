@@ -30,6 +30,26 @@
   )
 
 
+(defun block-information (block-name
+                          &optional
+                          (env *lispworks-parsing-env*))
+  (typecase env
+    (parsing-environment
+     (env-find-block block-name env))
+    (t (values nil nil nil))) ; Just to reiterate...
+  )
+
+
+(defun tag-information (tag-name
+                        &optional
+                        (env *lispworks-parsing-env*))
+  (typecase env
+    (parsing-environment
+     (env-find-tag tag-name env))
+    (t (values nil nil nil))) ; Just to reiterate...
+  )
+
+
 (defun augment-environment (env &rest keys ; Just a utility variable.
                                 &key
                                 variable
