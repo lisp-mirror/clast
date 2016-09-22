@@ -568,8 +568,9 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                                                              parsed-slot)
                                                             )
                                    (list struct-name)
-                                   (struct-slot-subform-type
-                                    parsed-slot)
+                                   (type-specifier-form-spec
+				    (struct-slot-subform-type
+				     parsed-slot))
                                    #|
                                    (if (getf (cddr parsed-slot) :type)
                                        (type-specifier-form-spec
