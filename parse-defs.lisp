@@ -328,9 +328,12 @@ The return values include the augmented environment.
     (declare (ignore dmm-kwd))
     (let* ((parsed-ll (parse-ll :define-modify-macro ll))
            (ll-vars (ll-vars parsed-ll))
+	   (ddm-def
+	    (enclose (parse-macro m-name ll m-body environment)
+		     environment))
            (new-env
             (augment-environment environment
-                                 :function (list dmm-name)
+                                 :macro (list (list dmm-name ddm-def))
                                  ))
            (m-body-env
             (augment-environment new-env
