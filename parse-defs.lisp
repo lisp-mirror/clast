@@ -141,10 +141,12 @@ The return values include the augmented environment.
     (declare (ignore defmacro-kwd))
     (let* ((parsed-ll (parse-ll :macro ll))
            (ll-vars (ll-vars parsed-ll))
+	   (m-def
+	    (enclose (parse-macro m-name ll m-body environment)
+		     environment))
            (new-env
-            (augment-environment environment
-                                 :function (list m-name)
-                                 ))
+	    (augment-environment environment
+				 :macro (list (list m-name m-def))))
            (m-body-env
             (augment-environment new-env
                                  :variable ll-vars
