@@ -286,9 +286,12 @@ The return values include the augmented environment.
            (new-env
             (if (function-information m-name environment)
                 environment
-                (augment-environment environment
-                                     :function (list m-name)
-                                     )))
+		(let ((m-def
+		       (enclose (parse-macro m-name ll m-body environment)
+				environment)))
+		  (augment-environment environment
+				       :macro (list (list m-name m-def))
+				       ))))
            (m-body-env
             (augment-environment new-env
                                  :variable ll-vars
