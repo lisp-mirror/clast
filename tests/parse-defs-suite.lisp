@@ -157,4 +157,36 @@
 	))))
 
 
+(test define-compile-macro-form
+  ;; GIVEN: a compiler macro that does nothing
+  (let ((input
+	 '(define-compiler-macro id (x) x)))
+    ;; WHEN: the macro is parsed
+    (multiple-value-bind (element env)
+	(clast:parse input)
+      ;; THEN: parsing returns a CLAST-ELEMENT instance of the
+      ;; appropriate type ...
+      (is (eql 'clast::define-compiler-macro-form (type-of element)))
+      ;; ... the environment is correctly augmented
+      (is (eql :macro (clast:function-information 'id env)))
+      (let ((name
+	     (clast::define-compiler-macro-form-name element))
+	    (lambda-list
+	     (clast::defmacro-form-lambda-list element))
+	    (body-env
+	     (clast::form-body-env element))
+	    (progn-forms
+	     (clast::form-progn element)))
+	;; ... the macro name is correctly noted
+	(is (eql 'id name))
+	;; ... as the lambda list
+	(is (eql 'clast::macro-lambda-list (type-of lambda-list)))
+	;; ... its body environment
+	(is (eql :lexical (clast:variable-information 'x body-env)))
+	(is (eql :macro (clast:function-information 'id body-env)))
+	;; ... and subforms
+	(is (eql 'clast::block-form (type-of progn-forms)))
+	))))
+
+
 ;;;; end of file -- parse-defs-tests.lisp --
