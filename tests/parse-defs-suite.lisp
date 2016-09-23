@@ -145,15 +145,18 @@
       (let ((name
 	     (clast::defgeneric-form-name element))
 	    (lambda-list
-	     (clast::defgeneric-form-lambda-list element)))
+	     (clast::defgeneric-form-lambda-list element))
+	    (methods
+	     (clast::defgeneric-form-methods element)))
 	;; ... the function name is correctly noted
 	(is (eql 'id name))
-	;; ... as lambda list
-	(is (eql 'clast::specialized-lambda-list (type-of lambda-list)))
+        ;; ... as its lambda list
+	(is (eql 'clast::specialized-lambda-list (type-of
+						  lambda-list)))
+	;;... its methods
+        (is (eql 1 (length methods)))
 	;; TODO: the body environment and implicit progned forms are
 	;; not added to the element during parsing at the moment.
-	;; TODO: add checking of methods, SBCL crashes when trying to
-	;; invoke clast:parse on a defgeneric with methods at the moment
 	))))
 
 
