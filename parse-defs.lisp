@@ -194,7 +194,9 @@ The return values include the augmented environment.
                             :key #'first))
            (parsed-meths
             (mapcar (lambda (m)
-                      (apply #'parse 'defmethod (cons 'defmethod (rest m))
+                      (apply #'parse-form 'defmethod
+			     (cons 'defmethod
+				   (cons gf-name (rest m)))
                              :enclosing-form form
                              :environment gf-env
                              :macroexpand macroexpand
@@ -238,7 +240,6 @@ The return values include the augmented environment.
            (meth-body (rest ll-body))
 
            (parsed-ll (parse-ll :specialized ll))
-           ;; (ll-vars (ll-vars parsed-ll))
            (gf-env
             (if (function-information gf-name environment) ; The GF may already be there.
                 environment
@@ -247,7 +248,7 @@ The return values include the augmented environment.
                                      )))
            (m-body-env
             (augment-environment gf-env
-                                 :variable (ll-vars ll)))
+                                 :variable (ll-vars parsed-ll)))
            )
       (values
        (make-instance 'defmethod-form
