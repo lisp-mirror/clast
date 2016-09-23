@@ -41,8 +41,8 @@
       ;; recorded correctly.
       (is (eql :documentation
 	       class-option-name))
-      (is (eql "The PERSON class."
-	       (clast::form-value (first class-option-value))))
+      (is (string= "The PERSON class."
+		   (clast::form-value (first class-option-value))))
       )))
 
 
@@ -56,7 +56,7 @@
 	 (superclasses
 	  (clast::defclass-form-superclasses output)))
     ;; THEN: the superclasses are correctly recorded
-    (is (eql '(printer scanner) superclasses))
+    (is (equal '(printer scanner) superclasses))
     ))
 
 
@@ -99,7 +99,7 @@
 	      (:type
 	       (is (eql 'integer value)))
 	      (:documentation
-	       (is (eql "docstring" value)))
+	       (is (string= "docstring" value)))
 	      (t (fail "Unexpected slot form found")))
 	    ))))))
 

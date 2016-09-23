@@ -21,7 +21,7 @@
 	       (clast::defvar-form-name element)))
       (is (eql 'clast:constant-form
 	       (type-of (clast::defvar-form-value element))))
-      (is (eql "documentation"
+      (is (string= "documentation"
 	       (clast::defvar-form-doc-string element)))
       (is (eql :special
 	       (clast:variable-information 'foo environment)))
@@ -41,7 +41,7 @@
 	       (clast::defparameter-form-name element)))
       (is (eql 'clast:constant-form
 	       (type-of (clast::defparameter-form-value element))))
-      (is (eql "documentation"
+      (is (string= "documentation"
 	       (clast::defparameter-form-doc-string element)))
       (is (eql :special
 	       (clast:variable-information 'foo environment)))
