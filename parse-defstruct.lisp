@@ -63,8 +63,10 @@
                               initform
                               &rest keys
                               &key
-                              (type t)
-                              (read-only nil)
+			      (type (make-instance
+				     'type-specifier-form
+				     :spec t))
+			      (read-only nil)
                               &allow-other-keys
                               )
   (remf keys :type)
