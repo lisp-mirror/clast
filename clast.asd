@@ -103,6 +103,9 @@ form."
 
 		 (:file "parse-defs-suite"
 		  :depends-on ("suites"))
+
+		 (:file "parse-defstruct-suite"
+		  :depends-on ("suites"))
 		 )
     )
 

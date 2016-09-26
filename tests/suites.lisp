@@ -10,5 +10,6 @@
 
 (def-suite :parse-defclass :in :parse)
 (def-suite :parse-defs :in :parse)
+(def-suite :parse-defstruct :in :parse)
 
 ;;;; end of file -- suites.lisp --
