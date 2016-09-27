@@ -497,7 +497,8 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
   (declare (ignore default-constructor-name
                    default-copier-name
                    default-predicate-name))
-  (values (make-struct-option-form :initial-offset (parse (first init-offset-option) env))
+  (values (make-struct-option-form :initial-offset
+				   (first init-offset-option))
           env))
 
 
