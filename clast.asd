@@ -106,6 +106,9 @@ form."
 
 		 (:file "parse-defstruct-suite"
 		  :depends-on ("suites"))
+
+		 (:file "parse-loop-suite"
+		  :depends-on ("suites"))
 		 )
     )
 
