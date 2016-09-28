@@ -1,6 +1,6 @@
 ;;;; -*- Mode: Lisp -*-
 
-;;;; parse-defs-tests.lisp --
+;;;; parse-defstruct-tests.lisp --
 
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
@@ -306,4 +306,4 @@
 	))))
 
 
-;;;; end of file -- parse-defs-tests.lisp --
+;;;; end of file -- parse-defstruct-tests.lisp --
