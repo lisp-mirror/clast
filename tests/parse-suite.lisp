@@ -73,9 +73,10 @@
     (is (eql 'clast::lambda-form (type-of operator)))
     ))
 	  
-;; TODO: Add FUNCTIONAL-OPERATOR-APPLICATION-FORM test
+;; TODO: Add FUNCTIONAL-OPERATOR-APPLICATION-FORM test. Here is a test
+;; case:
 ;;
-;; '((block name (+ 1 1)))
+;; ((block name (+ 1 1)))
 
 (test block-form
   ;; GIVEN:
@@ -126,69 +127,52 @@
     ))
 
 
-;; TODO: TAGBODY form-body form-tags GO form-name enclosing-tagbody
-
-(test tagbody-go
-  ;; GIVEN: 
-  (let* ((input '(tagbody (go second)
-		  first (print "error")
-		  second (print "ok")))
-	 ;; WHEN: 
-	 (output (clast:parse input)))
-    ;; THEN
-    ))
-
-;; CATCH form-catch-tag
-;; DECLARATION
-;; PROGN
-;; PROGV
-;; PROG
-;; PROG*
-;; EVAL-WHEN
-;; DECLAIM
-;; FLET
-;; LABELS
-;; FUNCTION
-;; LAMBDA
-;; IF
-;; COND
-;; CASE CCASE ECASE TYPECASE ETYPECASE CTYPECASE
-;; LET
-;; LET*
-;; MACROLET
-;; MULTIPLE-VALUE-BIND
-;; QUOTE
-;; THE
-;; SETQ
-;; SETF
-;; DOLIST
-;; DOTIMES
-;; DO
-;; DECLARATION: SYMBOL TYPE FTYPE IGNORE IGNORABLE OPTIMIZE INLINE
-;;              NOT-INLINE SPECIAL DYNAMIC-EXTENT DECLARATION
+;; TODO: Add TAGBODY (form-body form-tags) and GO (form-name
+;; enclosing-tagbody) tests after tags information handling in
+;; environments is fixed. Here is a test case:
+;;
+;; (tagbody (go second)
+;;  first (print "error")
+;;  second (print "ok")))
 
 
-;; (test 
-;;   ;; GIVEN:
-;;   (let* ((input '())
-;; 	 ;; WHEN:
-;; 	 (output (clast:parse input))
-;; 	 ( (clast:: output)))
-;; 	 )
-;;     ;; THEN: 
-;;     (is (eql  ))
-;;     ))
+;; TODO: Once parsing of THROW forms is added, define a test case for
+;; both CATCH (form-catch-tag) and THROW. Here is a test a case:
+;;
+;; (catch 'dummy-tag 1 2 (throw 'dummy-tag 3) 4)
 
 
-;; (test 
-;;   ;; GIVEN:
-;;   (let* ((input '(())
-;; 	 ;; WHEN:
-;; 	 (output (clast:parse input))
-;; 	 ( (clast:: output)))
-;; 	 )
-;;     ;; THEN: 
-;;     (is (eql  ))
-;;     ))
+;; TODO: DECLARE is really heavy to test because it requires testing
+;; of all possible declaration specifiers (SYMBOL TYPE FTYPE IGNORE
+;; IGNORABLE OPTIMIZE INLINE NOT-INLINE SPECIAL DYNAMIC-EXTENT
+;; DECLARATION)
+
+(test progn
+  ;; GIVEN:
+  (let ((input '(progn
+		 (defun id (x) x)
+		 (id 9))))
+    ;; WHEN:
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      ;; THEN: 
+      (is (eql 'clast::progn-form (type-of element)))
+      ;; FIXME: Both the environment that gets returned from a call to
+      ;; PARSE and the body environment associated with the element
+      ;; that gets returned do not get augmented with the definitions
+      ;; that occur within the PROGN. This is wrong and should be
+      ;; fixed.
+      (is (eql :function (function-information 'id environment)))
+      ;; ...
+      (let ((body (clast::form-body element))
+	    (body-env (clast::form-body-env element)))
+	(is (eql 2 (length body)))
+	(is (eql :function (function-information 'id body-env)))
+	))))
+	
+
+;; TODO: Add PROGV when its implementation is complete
+
+;; TODO: Add PROGV when its implementation is complete
 
 ;;;; end of file -- parse-tests.lisp --
