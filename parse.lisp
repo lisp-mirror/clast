@@ -849,7 +849,7 @@ environment1 : the environment resulting from parsing the FORM.
                     :top enclosing-form
                     :source form
                     :body-env ne
-                    :progn (apply #'parse `(progn ,@body)
+                    :progn (apply #'parse-form-seq body
                                   :environment ne
                                   keys))
      environment)
