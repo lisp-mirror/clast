@@ -371,4 +371,56 @@
     ))
 
 
+(test case
+  ;; GIVEN: a case form with three clauses and a constant as selection
+  (let* ((input
+	  '(case 4 (1 "hey") (2 "ho") (3 "letsgo")))
+	 ;; WHEN: the form is parsed
+	 (output
+	  (clast:parse input))
+	 (selection
+	  (clast::selector-form-selection output))
+	 (clauses
+	  (clast::form-clauses output)))
+    ;; THEN: an element of the appropriate type is returned
+    (is (eql 'clast::case-form (type-of output)))
+    ;;; ... the selection is recorded correctly
+    (is (eql 'clast:constant-form (type-of selection)))
+    ;; ... as all clauses
+    (is (eql 3 (length clauses)))
+    ))
+
+(test let
+  ;; GIVEN: a let form that declares two local variables and with
+  ;; three body forms, where one consists of a function declaration
+  (let ((input
+	 '(let ((x 1) (y 2))
+	   (defun id (x) x)
+	   (print x)
+	   (print y))))
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      ;; THEN: an element of the appropriate type is returned and the
+      ;; returned enviroment contains the function definition
+      (is (eql 'clast:let-form (type-of element)))
+      (is (eql :function (function-information 'id environment)))
+      (let ((binds
+	     (clast::form-binds element))
+	    (body
+	     (clast::form-body element))
+	    (body-env
+	     (clast::form-body-env element)))
+	;; ... both local variables are recorded as its body forms
+	(is (eql 2 (length binds))) 
+	(is (eql 3 (length body)))
+	;; ... and the body environment is correctle augmented with
+	;; declarations of both local variables and the function
+	;; definition
+	(is (eql :lexical (variable-information 'x body-env)))
+	(is (eql :lexical (variable-information 'y body-env)))
+	;; FIXME: as with most other parsing functions declarations from
+	;; implicitly progned forms are not tracked.
+	(is (eql :function (function-information 'id body-env)))
+	))))
+
 ;;;; end of file -- parse-tests.lisp --
