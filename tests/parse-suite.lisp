@@ -55,10 +55,10 @@
 
 
 (test lambda-application
-  ;; GIVEN:
+  ;; GIVEN: a lambda application form
   (let* ((input '((lambda (x) x) 9))
-	 ;; WHEN:
-	 (output
+	 ;; WHEN: the form is parsed
+	 (output 
 	  (clast:parse input))
 	 (operator
 	  (clast::form-operator output))
@@ -66,8 +66,10 @@
 	  (clast::form-args output))
 	 (arg
 	  (first args)))
-    ;; THEN: 
+    ;; THEN: an element of the correct type is returned
     (is (eql 'clast::lambda-application (type-of output)))
+    ;; ... the list of arguments that are getting applied and the
+    ;; lambda function are correctly recorded
     (is (eql 1 (length args)))
     (is (eql 'clast::constant-form (type-of arg)))
     (is (eql 'clast::lambda-form (type-of operator)))
@@ -79,18 +81,20 @@
 ;; ((block name (+ 1 1)))
 
 (test block-form
-  ;; GIVEN:
+  ;; GIVEN: a block form
   (let* ((input
 	  '(block name (+ 1 1)))
-	 ;; WHEN:
+	 ;; WHEN: when the form is parsed 
 	 (output
 	  (clast:parse input))
 	 (name
 	  (clast::block-name output))
 	 (body
 	  (clast::form-body output)))
-    ;; THEN: 
+    ;; THEN: an element of the appropriate type is returned
     (is (eql 'clast::block-form (type-of output)))
+    ;; ... and the name of the block and its body forms are correctly
+    ;; recorded
     (is (eql 'name name))
     (is (eql 1 (length body)))
     ;; TODO: Once the code for adding a lexical tag to the environment
@@ -99,10 +103,10 @@
 
 
 (test return-from
-  ;; GIVEN:
+  ;; GIVEN: a block form that contains a RETURN-FROM invocation
   (let* ((input
 	  '(block stop (return-from stop 9)))
-	 ;; WHEN:
+	 ;; WHEN: the form is parsed
 	 (output
 	  (clast:parse input))
 	 (body
@@ -115,13 +119,17 @@
 	  (clast::form-result return-from-form))
 	 (return-from-result-value
 	  (clast::form-value return-from-result-form))
+	 ;; TODO: Add enclosing block checking when the implementation
+	 ;; for adding it is available.
 	 ;; (return-from-enclosing-block
 	 ;;  (clast::form-enclosing-block return-from-form))
 	 )
-    ;; THEN:
+    ;; THEN: the parsing reaches the return form and an element of the
+    ;; appropriate type is returned
     (is (eql 'clast::return-from-form (type-of return-from-form)))
+    ;; ... and the name of the block that the return-from form refers
+    ;; to is recorded correctly along with the specified return value
     (is (eql 'stop return-from-name))
-    (is (eql 'clast:constant-form (type-of return-from-result-form)))
     (is (eql 9 return-from-result-value))
     ))
 
@@ -147,14 +155,14 @@
 ;; DECLARATION)
 
 (test progn
-  ;; GIVEN:
+  ;; GIVEN: a progn form
   (let ((input '(progn
 		 (defun id (x) x)
 		 (id 9))))
-    ;; WHEN:
+    ;; WHEN: the form is parsed
     (multiple-value-bind (element environment)
 	(clast:parse input)
-      ;; THEN: 
+      ;; THEN: an element of the appropriate type is returned
       (is (eql 'clast::progn-form (type-of element)))
       ;; FIXME: Both the environment that gets returned from a call to
       ;; PARSE and the body environment associated with the element
@@ -162,7 +170,8 @@
       ;; that occur within the PROGN. This is wrong and should be
       ;; fixed.
       (is (eql :function (function-information 'id environment)))
-      ;; ...
+      ;; ... the body of the form is correctly recorded together with
+      ;; its associated environment
       (let ((body (clast::form-body element))
 	    (body-env (clast::form-body-env element)))
 	(is (eql 2 (length body)))
@@ -173,20 +182,17 @@
 ;; TODO: Add PROGV when its implementation is complete
 
 
-;; TODO: Add PROGV when its implementation is complete
-
-
 ;; TODO: Deferring testing of PROG and PROG* because they
 ;; significantly complex.
 
 
 (test eval-when
-  ;; GIVEN:
+  ;; GIVEN: an eval-when form that declares a function and call PRINT
   (let* ((input
 	  '(eval-when (:compile-toplevel :load-toplevel :execute)
 	    (defun id (x) x)
 	    (print "something")))
-	 ;; WHEN:
+	 ;; WHEN: the form is parsed
 	 (output
 	  (clast:parse input))
 	 (situations
@@ -195,11 +201,12 @@
 	  (clast::form-body output))
 	 (body-env
 	  (clast::form-body-env output)))
-    ;; THEN: 
+    ;; THEN: an element of the appropriate type is returned
     (is (eql 'eval-when-form (type-of output)))
+    ;; ... the form's situations list is correctly recorded
     (is (equal situations
      	       (list :compile-toplevel :load-toplevel :execute)))
-    ;; ...
+    ;; ... as both forms in its body
     (is (eql 2 (length body)))
     ;; FIXME: The current implementation does not augment the body
     ;; environment while parsing its body forms.
@@ -210,15 +217,18 @@
 
 
 (test declaim
-  ;; GIVEN: 
+  ;; GIVEN: a declaim form with two declarations
   (let ((input
 	 '(declaim (special first) (special second))))
-					;: WHEN: 
+    ;; WHEN: the form is parsed
     (multiple-value-bind (element environment)
 	(clast:parse input)
-      ;; THEN: 
+      ;; THEN: the returned environment records information regarding
+      ;; both declarations
       (is (eql :special
-	       (variable-information 'var environment)))
+	       (variable-information 'first environment)))
+      (is (eql :special
+	       (variable-information 'second environment)))
       (let* ((declarations
 	      (clast::declaration-form-declarations element))
 	     (declaration
@@ -230,23 +240,29 @@
 	     ;; this test failure.
 	     (resulting-environment
 	      (clast::declaration-form-resulting-environment element)))
-	;; ...
+	;; ... both declarations are associated to the element
 	(is (eql 2
 		 (length declarations)))
+	;; ... with the appropriate identifier
 	(is (eql 'special
 		 specifier-identifier))
+	;; ... and the resulting environment associate with the
+	;; returned element is correctly augmented
 	(is (eql :special
-		 (variable-information 'var resulting-environment)))
+		 (variable-information 'first resulting-environment)))
+	(is (eql :special
+		 (variable-information 'second resulting-environment)))
 	))))
 
 
 (test flet
-  ;; GIVEN: 
+  ;; GIVEN: a flet form that declares a local function and that, in
+  ;; its body declares a top level function
   (let ((input
 	 '(flet ((local-id (x) x))
 	   (local-id 9)
 	   (defun id (x) x))))
-    ;; WHEN: 
+    ;; WHEN: the form is parsed
     (multiple-value-bind (element environment)
 	(clast:parse input)
       ;; THEN: an element of the appropriate type should be returned
@@ -296,10 +312,63 @@
 ;; TODO: Add FUNCTION parsing tests once its implementation is
 ;; complete.
 
+
 ;; LAMBDA-FORM (form-lambda-list form-function body body-env)
+
 
 ;; FIXME: the PARSE method that specializes on LAMBDA delegates work
 ;; to PARSE-LAMBDA-FORM, which does not return a tuple (CLAST-ELEMENT,
 ;; ENVIRONMENT) but just a CLAST-ELEMENT.
+
+
+(test if
+  ;; GIVEN: an if form with two branches
+  (let* ((input
+	  '(if t 1 2))
+	 ;; WHEN: the form is parsed
+	 (output
+	  (clast:parse input))
+	 (condition
+	  (clast::form-condition output))
+	 (then
+	  (clast::form-then output))
+	 (else
+	  (clast::form-else output)))
+    ;; THEN: an element of the appropriate type is returned
+    (is (eql 'clast::if-form (type-of output)))
+    ;; ... and the if condition form is recorded correctly
+    (is (eql 'clast::constant-ref (type-of condition)))
+    ;; ... as both branches
+    (is (eql 'clast::constant-form (type-of then)))
+    (is (eql 'clast::constant-form (type-of else)))
+    ))
+
+
+(test cond
+  ;; GIVEN: a cond form with two clauses, where the first clause
+  ;; contains two subforms
+  (let* ((input
+	  '(cond
+	    (t (print 1) (print 2))
+	    (nil 1)))
+	 ;; WHEN: the form is parsed
+	 (output
+	  (clast:parse input))
+	 (clauses
+	  (clast::form-clauses output))
+	 (clause
+	  (first clauses))
+	 (clause-body
+	  (clast::form-body clause))
+	 (clause-selector
+	  (clast::form-selector clause)))
+    ;; THEN: an element of the appropriate type is returned
+    (is (eql 'clast:cond-form (type-of output)))
+    ;; ... and both clauses are recorded
+    (is (eql 2 (length clause-body)))
+    ;; ... with their selectors
+    (is (eql 'clast::constant-ref (type-of clause-selector)))
+    ))
+
 
 ;;;; end of file -- parse-tests.lisp --
