@@ -423,4 +423,36 @@
 	(is (eql :function (function-information 'id body-env)))
 	))))
 
+
+(test macrolet
+  ;; GIVEN: a macrolet form that defines a local id macro that gets
+  ;; executed in its body.
+  (let ((input '(macrolet ((id (x) x))
+		 (id 9))))
+    ;; WHEN: the form is parsed
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      ;; THEN: an element of the appropriate type is returned and the
+      (is (eql 'clast::macrolet-form (type-of element)))
+      ;; TODO: Update this test once the parsing of progn forms is
+      ;; corrected across all different parsing function in order to
+      ;; support nested environment additions. Here you should check
+      ;; for handling of those additions.
+      (let* ((binds
+	      (clast::form-binds element))
+	     (bind
+	      (first binds))
+	     (body
+	      (clast::form-body element))
+	     (body-env
+	      (clast::form-body-env element)))
+	;; ... the form bindings are correctly recorded as its body
+	;; forms
+	(is (eql 'clast:macro-definition-form (type-of bind)))
+	(is (eql 'clast:macro-application (type-of (first body))))
+	;; ... and the body environment is correctly augmented
+	(is (eql :macro (function-information 'id body-env)))
+	;; ... add check for potential nested definitions here
+	))))    
+
 ;;;; end of file -- parse-tests.lisp --
