@@ -800,7 +800,7 @@ environment1 : the environment resulting from parsing the FORM.
                   :top enclosing-form
                   :source form
                   :body-env environment
-                  :progn (apply #'parse `(progn ,@(cddr form)) keys)
+                  :progn (apply #'parse-form-seq (cddr form) keys)
                   )
    environment)
   )
