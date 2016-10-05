@@ -72,7 +72,7 @@
     (is (eql 'clast::constant-form (type-of arg)))
     (is (eql 'clast::lambda-form (type-of operator)))
     ))
-	  
+
 ;; TODO: Add FUNCTIONAL-OPERATOR-APPLICATION-FORM test. Here is a test
 ;; case:
 ;;
@@ -115,15 +115,14 @@
 	  (clast::form-result return-from-form))
 	 (return-from-result-value
 	  (clast::form-value return-from-result-form))
-	 ; (return-from-enclosing-block
-	 ;  (clast::form-enclosing-block return-from-form))
+	 ;; (return-from-enclosing-block
+	 ;;  (clast::form-enclosing-block return-from-form))
 	 )
     ;; THEN:
     (is (eql 'clast::return-from-form (type-of return-from-form)))
     (is (eql 'stop return-from-name))
     (is (eql 'clast:constant-form (type-of return-from-result-form)))
     (is (eql 9 return-from-result-value))
-    ; (is (eql  ))
     ))
 
 
@@ -169,10 +168,138 @@
 	(is (eql 2 (length body)))
 	(is (eql :function (function-information 'id body-env)))
 	))))
-	
+
 
 ;; TODO: Add PROGV when its implementation is complete
 
+
 ;; TODO: Add PROGV when its implementation is complete
+
+
+;; TODO: Deferring testing of PROG and PROG* because they
+;; significantly complex.
+
+
+(test eval-when
+  ;; GIVEN:
+  (let* ((input
+	  '(eval-when (:compile-toplevel :load-toplevel :execute)
+	    (defun id (x) x)
+	    (print "something")))
+	 ;; WHEN:
+	 (output
+	  (clast:parse input))
+	 (situations
+	  (clast::form-situations output))
+	 (body
+	  (clast::form-body output))
+	 (body-env
+	  (clast::form-body-env output)))
+    ;; THEN: 
+    (is (eql 'eval-when-form (type-of output)))
+    (is (equal situations
+     	       (list :compile-toplevel :load-toplevel :execute)))
+    ;; ...
+    (is (eql 2 (length body)))
+    ;; FIXME: The current implementation does not augment the body
+    ;; environment while parsing its body forms.
+    (is (eql :function (function-information 'id body-env)))
+    ;; TODO: when a strategy for adding elements to the returned
+    ;; environment is decided, update this test to reflect that.
+    ))
+
+
+(test declaim
+  ;; GIVEN: 
+  (let ((input
+	 '(declaim (special first) (special second))))
+					;: WHEN: 
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      ;; THEN: 
+      (is (eql :special
+	       (variable-information 'var environment)))
+      (let* ((declarations
+	      (clast::declaration-form-declarations element))
+	     (declaration
+	      (first declarations))
+	     (specifier-identifier
+	      (clast::declaration-specifier-identifier declaration))
+	     ;; FIXME: The resulting environment slot is never
+	     ;; initialized nor considered during parsing. This causes
+	     ;; this test failure.
+	     (resulting-environment
+	      (clast::declaration-form-resulting-environment element)))
+	;; ...
+	(is (eql 2
+		 (length declarations)))
+	(is (eql 'special
+		 specifier-identifier))
+	(is (eql :special
+		 (variable-information 'var resulting-environment)))
+	))))
+
+
+(test flet
+  ;; GIVEN: 
+  (let ((input
+	 '(flet ((local-id (x) x))
+	   (local-id 9)
+	   (defun id (x) x))))
+    ;; WHEN: 
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      ;; THEN: an element of the appropriate type should be returned
+      (is (eql 'clast::flet-form (type-of element)))
+      ;; ... the functions that were defined locally should not be in the
+      ;; return environment (FIXME)
+      (is (eql nil (function-information 'local-id environment)))
+      ;; ... but progned definitions should
+      (is (eql :function (function-information 'id environment)))
+      (let ((binds
+	     (clast::form-binds element))
+	    (body
+	     (clast::form-body element))
+	    (body-env
+	     (clast::form-body-env element)))
+	;; ... body forms should be recorded correctly
+	(is (eql 2 (length body)))
+	;; ... as bindings, that should also be added to the body
+	;; environment
+	(is (eql :function (function-information 'local-id body-env)))
+	))))
+
+;; LABELS is equivalent to FLET except that the scope of the defined
+;; function names for LABELS encompasses the function definitions
+;; themselves as well as the body. Since this difference is not
+;; recorded by the library fttb the test is the exact same.
+(test labels
+  (let ((input
+	 '(labels ((local-id (x) x))
+	   (local-id 9)
+	   (defun id (x) x))))
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      (is (eql 'clast::labels-form (type-of element)))
+      ;; ... the functions that were defined locally should not be in the
+      ;; return environment (FIXME)
+      (is (eql nil (function-information 'local-id environment)))
+      (is (eql :function (function-information 'id environment)))
+      (let ((binds (clast::form-binds element))
+	    (body (clast::form-body element))
+	    (body-env (clast::form-body-env element)))
+	(is (eql 2 (length body)))
+	(is (eql :function (function-information 'local-id body-env)))
+	))))
+
+
+;; TODO: Add FUNCTION parsing tests once its implementation is
+;; complete.
+
+;; LAMBDA-FORM (form-lambda-list form-function body body-env)
+
+;; FIXME: the PARSE method that specializes on LAMBDA delegates work
+;; to PARSE-LAMBDA-FORM, which does not return a tuple (CLAST-ELEMENT,
+;; ENVIRONMENT) but just a CLAST-ELEMENT.
 
 ;;;; end of file -- parse-tests.lisp --
