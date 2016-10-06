@@ -75,10 +75,7 @@
     (is (eql 'clast::lambda-form (type-of operator)))
     ))
 
-;; TODO: Add FUNCTIONAL-OPERATOR-APPLICATION-FORM test. Here is a test
-;; case:
-;;
-;; ((block name (+ 1 1)))
+;; TODO: Add FUNCTIONAL-OPERATOR-APPLICATION-FORM tests.
 
 (test block-form
   ;; GIVEN: a block form
@@ -97,7 +94,7 @@
     ;; recorded
     (is (eql 'name name))
     (is (eql 1 (length body)))
-    ;; TODO: Once the code for adding a lexical tag to the environment
+    ;; FIXME: Once the code for adding a lexical tag to the environment
     ;; you should also test that the tag is added correctly.
     ))
 
@@ -153,6 +150,7 @@
 ;; of all possible declaration specifiers (SYMBOL TYPE FTYPE IGNORE
 ;; IGNORABLE OPTIMIZE INLINE NOT-INLINE SPECIAL DYNAMIC-EXTENT
 ;; DECLARATION)
+
 
 (test progn
   ;; GIVEN: a progn form
@@ -313,12 +311,11 @@
 ;; complete.
 
 
-;; LAMBDA-FORM (form-lambda-list form-function body body-env)
-
-
 ;; FIXME: the PARSE method that specializes on LAMBDA delegates work
 ;; to PARSE-LAMBDA-FORM, which does not return a tuple (CLAST-ELEMENT,
 ;; ENVIRONMENT) but just a CLAST-ELEMENT.
+;; 
+;; LAMBDA-FORM (form-lambda-list form-function body body-env)
 
 
 (test if
@@ -389,6 +386,7 @@
     ;; ... as all clauses
     (is (eql 3 (length clauses)))
     ))
+
 
 (test let
   ;; GIVEN: a let form that declares two local variables and with
