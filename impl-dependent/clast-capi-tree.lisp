@@ -3,7 +3,7 @@
 (in-package "CLAST")
 
 (eval-when (:load-toplevel :compile-toplevel)
-  (shadow '(capi:item))
+  (shadow '(capi:item capi:element))
   (use-package "CAPI")
   )
 
