@@ -453,6 +453,47 @@
 	;; ... and the body environment is correctly augmented
 	(is (eql :macro (function-information 'id body-env)))
 	;; ... add check for potential nested definitions here
-	))))    
+	))))
+
+
+(test multiple-value-bind
+  ;; GIVEN: an mvb form that binds two variables and with two forms body
+  (let ((input '(multiple-value-bind (first second)
+		 (values 1 2)
+		 (defun id (x) x)
+		 (print first)
+		 (print second))))
+    ;; WHEN: the form is parsed
+    (multiple-value-bind (element environment)
+	(clast:parse input)
+      ;; THEN: an element of the appropriate type is returned and the
+      ;; environment is correctly augmented with definitions that
+      ;; occur in the form's body
+      (is (eql 'clast::mvb-form (type-of element)))
+      (is (eql :function (function-information 'id environment)))
+      (let ((binds
+	     (clast::form-binds element))
+	    (values-form
+	     (clast::form-values-form element))
+	    (body
+	     (clast::form-body element))
+	    (body-env
+	     (clast::form-body-env element)))
+	;; ... and both bindings and the values form are correctly
+	;; recorded
+	(is (equal '(first second) binds))
+	(is (eql 'clast::function-application (type-of values-form)))
+	;; ... as body forms and the body environment
+	(is (eql 3 (length body)))
+	(is (eql :function (function-information 'id body-env)))
+	))))
+
+
+;; TODO: Once implementation of SETQ and SETF parsing functions is
+;; complete, add tests for them.
+
+
+;; TODO: Once addition tags to the environment is fixed, add tests for
+;; DOLIST, DOTIMES and DO.
 
 ;;;; end of file -- parse-tests.lisp --
