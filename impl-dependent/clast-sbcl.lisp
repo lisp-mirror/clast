@@ -15,6 +15,97 @@
 (eval-when (:load-toplevel :compile-toplevel :execute)
   (require :sb-cltl2))
 
+;;;; parsing-environment --
+;;;; This is probably general enough to be moved "up" in 'env.lisp',
+;;;; but, at the cost of having to maintain duplicated code in several
+;;;; files, we prefer to keep it here, in order to keep all the code for a
+;;;; given implementation together.
+
+(defstruct (parsing-environment
+            (:include env-wrapper)
+            (:constructor
+             %make-parsing-environment (&optional
+                                        environment
+                                        enclosing-env))
+            )
+  tags
+  blocks
+  enclosing-env
+  )
+
+
+(defmethod print-object ((pe parsing-environment) stream)
+  (print-unreadable-object (pe stream :identity t)
+    (write-string "CLAST Parsing Environment" stream)))
+
+
+(defun ensure-parsing-environment (&optional env)
+  (%make-parsing-environment env))
+
+
+(defmethod is-environment ((e parsing-environment)) t)
+(defmethod is-environment ((e sb-kernel:lexenv)) t)
+
+
+(defvar *sbcl-parsing-env*
+  (ensure-parsing-environment))
+
+
+(declaim (inline get-implementation-env)
+         (ftype (function ((or null
+                               parsing-environment
+                               sb-kernel:lexenv))
+                          (or null sb-kernel:lexenv)
+                          ;; T ; If we want to be less precise.
+                          )
+                get-implementation-env))
+
+
+(defun get-implementation-env (env)
+  (declare (type (or null
+                     parsing-environment
+                     sb-kernel:lexenv)))
+  (etypecase env
+    (null env)
+    (sb-kernel:lexenv env)
+    (parsing-environment (implementation-env env))))
+
+
+(defun env-find-block (b-name env)
+  (declare (type parsing-environment env))
+  (labels ((env-find-block-1 (b-name env)
+             (let ((b (member b-name (parsing-environment-blocks env)
+                              :test #'eq)))
+               (if b
+                   b
+                   (let ((next-pe (parsing-environment-enclosing-env env)))
+                     (when next-pe
+                       (env-find-block-1 b-name next-pe))))
+               ))
+           )
+    (let ((block-info (env-find-block-1 b-name env)))
+      (if block-info
+          (values :block nil nil)
+          (values nil nil nil)))))
+
+
+(defun env-find-tag (t-name env)
+  (declare (type parsing-environment env))
+  (labels ((env-find-tag-1 (t-name env)
+             (let ((tt (member t-name (parsing-environment-tags env)
+                               :test #'eq)))
+               (if tt
+                   tt
+                   (let ((next-pe (parsing-environment-enclosing-env env)))
+                     (when next-pe
+                       (env-find-tag-1 t-name next-pe))))
+               ))
+           )
+    (let ((tag-info (env-find-tag-1 t-name env)))
+      (if tag-info
+          (values :tag nil nil)
+          (values nil nil nil)))))
+
 
 ;;;; The Magnificent (yet neglected) 7.
 ;;;; CLtL2 environment manipulation manipulation functions.
