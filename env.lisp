@@ -69,7 +69,7 @@
           Your implementation is not supported by CLAST because ~
           it lacks the basic CLtL2 environment handling functions. ~
           Please lobby your vendor/implementor to support and distribute ~
-          them, and CLAST will support the implementation as well."
+          them, and CLAST will support that implementation as well."
          (lisp-implementation-type)
          (lisp-implementation-version)
          ))
