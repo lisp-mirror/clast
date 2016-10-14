@@ -11,7 +11,35 @@
 
 (in-package "CLAST")
 
-;;;; env --
+
+;;;; *cl-global-env*
+;;;; 
+;;;; Notes:
+;;;;
+;;;; 20161014 MA: NIL usually suffices.  However it may be better to
+;;;; wrap this is in an indirection layer in order to avoid clobbering
+;;;; the actual CL implementation global environment.
+;;;;
+;;;; A way to achieve this is to redefine *cl-global-env* in each of
+;;;; the implementation dependent code bases (in 'impl-dependent').
+
+(defvar *cl-global-env* nil
+  "This variable contains a designator for the 'global environment'.
+
+The designator may be different from the actual implementation's
+global environment designator (although NIL is valid), in order to
+avoid clobbering it during the the parsing process.
+
+This variable is special and it is necessary to handle the
+situation of definitions (e.g., via DEFUN) done in a non empty lexical
+environment.
+
+See also:
+
+Hyperspec 3.1.1.1")
+
+
+;;;; env-wrapper --
 ;;;; As correctly noted in CL-WALKER you need to have a hairy
 ;;;; environment structure to pan over incompatibilities.  You need (at least) two
 ;;;; environments: one relative to the "walking" procedure and the other that
