@@ -26,4 +26,4 @@
   (eq :symbol-macro (variable-information s env)))
 
 
-;;;; end of file -- env.lisp --
+;;;; end of file -- env-queries.lisp --
