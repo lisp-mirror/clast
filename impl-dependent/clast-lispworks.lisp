@@ -59,10 +59,12 @@
 (defun get-implementation-env (env)
   (declare (type (or null
                      parsing-environment
-                     sys::augmented-environment)))
+                     sys::augmented-environment
+                     compiler::environment)))
   (etypecase env
     (null env)
     (sys::augmented-environment env)
+    (compiler::environment env)
     (parsing-environment (implementation-env env))))
 
 
