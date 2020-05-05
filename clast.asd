@@ -87,7 +87,7 @@ form."
                )
   )
 
-(asdf:defsystem :clast-tests
+(asdf:defsystem :clast/tests
     :author "Marco Antoniotti"
     :license "BSD"
     :description "Tests for the CLAST library"

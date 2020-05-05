@@ -86,7 +86,7 @@ form."
                )
   )
 
-(mk:defsystem :clast-tests
+(mk:defsystem :clast/tests
     :licence "BSD"
     :documentation "Tests for the CLAST library."
     :depends-on ("CLAST" "FIVEAM")
