@@ -138,6 +138,44 @@ applied, via REDUCE to the resulting sequence.
         )))
 
 
+(defmethod walk ((ce t_lambda-list)
+                 &rest keys
+                 &key
+                 (result-type 'list)
+                 ;; (key #'identity)
+                 ;; ((:map mapfun) (lambda (e) (list (funcall key e))))
+                 ;; ((:reduce redfun) #'append)
+                 ;; (initial-value ())
+                 environment
+                 ;; op-first ; boolean
+                 &allow-other-keys)
+  (declare (ignore environment))
+  
+  (when (plusp (count-lambda-list-vars ce))
+    (warn "CLAST: lambda list walking not yet implemented; lambda list ~A."
+          ce))
+  (concatenate result-type ())
+  )
+
+
+(defmethod walk ((ce t)
+                 &rest keys
+                 &key
+                 (result-type 'list)
+                 ;; (key #'identity)
+                 ;; ((:map mapfun) (lambda (e) (list (funcall key e))))
+                 ;; ((:reduce redfun) #'append)
+                 ;; (initial-value ())
+                 environment
+                 ;; op-first ; boolean
+                 &allow-other-keys)
+  (declare (ignore environment))
+  (warn "CLAST: walking a form for which no structure is yet known: ~A."
+        ce)
+  (concatenate result-type ())
+  )
+
+
 ;;;;---------------------------------------------------------------------------
 ;;;; Queries...
 
