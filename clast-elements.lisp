@@ -1302,20 +1302,25 @@ result : a list of 'subforms' (or NIL).
 
 
 (defmethod clast-element-subforms ((f binding-form))
-  (list (form-binds f)
-        (form-progn f)))
+  (list* (form-binds f)
+         (form-progn f)))
 
 
 (defmethod clast-element-subforms ((fdf function-definition-form))
-  (list (form-function fdf)
-        (form-lambda-list fdf)
-        (form-progn fdf)))
+  (list* (form-function fdf)
+         (form-lambda-list fdf)
+         (form-progn fdf)))
 
 
 (defmethod clast-element-subforms ((df defun-form))
-  (list (defun-form-name df)
-        (defun-form-lambda-list df)
-        (form-progn df)))
+  (list* ; (defun-form-name df)
+         (defun-form-lambda-list df)
+         (form-progn df)))
+
+
+(defmethod clast-element-subforms ((lf lambda-form))
+  (list* (form-lambda-list lf)
+         (form-progn lf)))
 
 
 (defmethod clast-element-subforms ((df def-symbol-ref-form))
@@ -1332,10 +1337,10 @@ result : a list of 'subforms' (or NIL).
 
 
 (defmethod clast-element-subforms ((df do-form))
-  (list (form-binds df)
-        (form-test df)
-        (return-form df)
-        (form-body df)))
+  (list* (form-binds df)
+         (form-test df)
+         (return-form df)
+         (form-body df)))
 
 
 (defmethod clast-element-subforms ((slf simple-loop-form))
