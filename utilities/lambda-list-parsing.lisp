@@ -36,6 +36,19 @@
            ))
 
 
+(defvar +lambda-list-var-type-keywords+
+  '(&reqvar
+    &whole
+    &environment
+    &optional
+    &rest
+    &body
+    &key
+    &allow-other-keys
+    &aux
+    ))
+
+
 (defstruct (t_lambda-list
             (:conc-name ll-)
             (:constructor nil)
@@ -44,7 +57,7 @@
   (optional-vars () :type list :read-only t)
   (keyword-vars () :type list :read-only t)
   (rest-var () :type list :read-only t)
-  (auxiliary-vars () :type list :read-only t)
+  (auxiliary-vars () :type list :read-only t) ;
   (allow-other-keys nil :type boolean :read-only t)
   )
 
@@ -603,6 +616,8 @@
 
 (defmethod count-ll-vars ((kind (eql '&body)) (ll t_lambda-list)) 0)
 
+(defmethod count-ll-vars ((kind (eql '&allow-other-keys)) (ll t_lambda-list)) 0)
+
 
 
 (defmethod count-ll-vars ((kind (eql '&reqvar)) (ll destructuring-lambda-list))
@@ -640,6 +655,11 @@
 
 (defmethod count-ll-vars ((kind (eql '&body)) (ll macro-lambda-list))
   (if (macro-lambda-list-body-var ll) 1 0))
+
+
+(defun count-lambda-list-vars (ll)
+  (loop for llind in +lambda-list-var-type-keywords+
+        sum (count-ll-vars llind ll)))
 
 
 ;;;; end of file -- lambda-list-parsing.lisp --
