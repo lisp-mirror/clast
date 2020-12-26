@@ -2,6 +2,7 @@ CLAST
 =====
 
 Copyright (c) 2014-2020 Marco Antoniotti and Matteo Crespi, all rights reserved.
+Copyright (c) 2020-2021 Marco Antoniotti, all rights reserved.
 
 CLAST is a Common Lisp library that can produce an "abstract syntax
 tree" of a "form".  Its main use is for source analysis and
