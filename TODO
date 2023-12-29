@@ -2,7 +2,10 @@
 
 # TODO list for CLAST.
 
-20140225	Make sure to parse/macroexpand also the lambda lists
+2014-02-25	Make sure to parse/macroexpand also the lambda lists
 		initializations.
 
-20140225	Fix the treatment of symbol-macros.
+2014-02-25	Fix the treatment of symbol-macros.
+
+2023-12-29	Complete the missing parts.
+
