@@ -11,6 +11,8 @@ tree\" of a \"form\".  Its main use is for source analysis and
 transformation, e.g., extracting the \"free variables\" list from a
 form."
   :source-extension "lisp"
+  :binary-pathname "_clastbin"
+
   :components ((:file "clast-package")
 
                (:file "clast-elements"
