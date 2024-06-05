@@ -57,9 +57,9 @@
 	(clast:parse input)
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
-      (is (eql 'clast::defun-form (type-of element)))
+      (is (eq 'clast::defun-form (type-of element)))
       ;; ... the environment is correctly augmented
-      (is (clast:function-information 'id env))
+      (is-true (clast:function-information 'id env))
       (let ((name
 	     (clast::defun-form-name element))
 	    (lambda-list
@@ -69,14 +69,14 @@
 	    (progn-forms
 	     (clast::form-progn element)))
 	;; ... the function name is correctly noted
-	(is (eql 'id name))
+	(is (eq 'id name))
 	;; ... as lambda list
-	(is (eql 'clast::ordinary-lambda-list (type-of lambda-list)))
+	(is (eq 'clast::ordinary-lambda-list (type-of lambda-list)))
 	;; ... its body environment
-	(is (eql :lexical (clast:variable-information 'x body-env)))
-	(is (eql :function (clast:function-information 'id body-env)))
+	(is (eq :lexical (clast:variable-information 'x body-env)))
+	(is (eq :function (clast:function-information 'id body-env)))
 	;; ... and subforms
-	(is (eql 'clast::block-form (type-of progn-forms)))
+	(is (eq 'clast::block-form (type-of progn-forms)))
 	;; TODO: Related types are not recorded correctly on SBCL. The
 	;; correct code is in place but an internal crash prevents this
 	;; from working. The test defun-api
@@ -106,9 +106,9 @@
 	(clast:parse input)
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
-      (is (eql 'clast::defmacro-form (type-of element)))
+      (is (eq 'clast::defmacro-form (type-of element)))
       ;; ... the environment is correctly augmented
-      (is (eql :macro (clast:function-information 'id env)))
+      (is (eq :macro (clast:function-information 'id env)))
       (let ((name
 	     (clast::defmacro-form-name element))
 	    (lambda-list
@@ -118,14 +118,14 @@
 	    (progn-forms
 	     (clast::form-progn element)))
 	;; ... the macro name is correctly noted
-	(is (eql 'id name))
+	(is (eq 'id name))
 	;; ... as the lambda list
-	(is (eql 'clast::macro-lambda-list (type-of lambda-list)))
+	(is (eq 'clast::macro-lambda-list (type-of lambda-list)))
 	;; ... its body environment
-	(is (eql :lexical (clast:variable-information 'x body-env)))
-	(is (eql :macro (clast:function-information 'id body-env)))
+	(is (eq :lexical (clast:variable-information 'x body-env)))
+	(is (eq :macro (clast:function-information 'id body-env)))
 	;; ... and subforms
-	(is (eql 'clast::block-form (type-of progn-forms)))
+	(is (eq 'clast::block-form (type-of progn-forms)))
 	))))
 
 
@@ -139,9 +139,9 @@
 	(clast:parse input)
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
-      (is (eql 'clast::defgeneric-form (type-of element)))
+      (is (eq 'clast::defgeneric-form (type-of element)))
       ;; ... the environment is correctly augmented
-      (is (clast:function-information 'id env))
+      (is-true (clast:function-information 'id env))
       (let ((name
 	     (clast::defgeneric-form-name element))
 	    (lambda-list
@@ -149,12 +149,12 @@
 	    (methods
 	     (clast::defgeneric-form-methods element)))
 	;; ... the function name is correctly noted
-	(is (eql 'id name))
+	(is (eq 'id name))
         ;; ... as its lambda list
-	(is (eql 'clast::specialized-lambda-list (type-of
-						  lambda-list)))
+	(is (eq 'clast::specialized-lambda-list (type-of
+                                                 lambda-list)))
 	;;... its methods
-        (is (eql 1 (length methods)))
+        (is (= 1 (length methods)))
 	;; TODO: the body environment and implicit progned forms are
 	;; not added to the element during parsing at the moment.
 	))))
@@ -169,9 +169,9 @@
 	(clast:parse input)
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
-      (is (eql 'clast::define-compiler-macro-form (type-of element)))
+      (is (eq 'clast::define-compiler-macro-form (type-of element)))
       ;; ... the environment is correctly augmented
-      (is (eql :macro (clast:function-information 'id env)))
+      (is (eq :macro (clast:function-information 'id env)))
       (let ((name
 	     (clast::define-compiler-macro-form-name element))
 	    (lambda-list
@@ -181,14 +181,14 @@
 	    (progn-forms
 	     (clast::form-progn element)))
 	;; ... the macro name is correctly noted
-	(is (eql 'id name))
+	(is (eq 'id name))
 	;; ... as the lambda list
-	(is (eql 'clast::macro-lambda-list (type-of lambda-list)))
+	(is (eq 'clast::macro-lambda-list (type-of lambda-list)))
 	;; ... its body environment
-	(is (eql :lexical (clast:variable-information 'x body-env)))
-	(is (eql :macro (clast:function-information 'id body-env)))
+	(is (eq :lexical (clast:variable-information 'x body-env)))
+	(is (eq :macro (clast:function-information 'id body-env)))
 	;; ... and subforms
-	(is (eql 'clast::block-form (type-of progn-forms)))
+	(is (eq 'clast::block-form (type-of progn-forms)))
 	))))
 
 
