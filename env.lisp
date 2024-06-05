@@ -47,8 +47,7 @@ Hyperspec 3.1.1.1")
 ;;;;
 ;;;; The "walking environment" is essentially a wrapper for the CLtL2
 ;;;; "environments" with a few extra bells and whistles.
-
-;;;; env-wrapper --
+;;;;
 ;;;; Note: This is the "opaque" structure par excellence.
 ;;;; The actual 'environment' API is in the "impl-dependent" files.
 ;;;;
