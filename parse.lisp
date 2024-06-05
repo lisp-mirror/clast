@@ -40,9 +40,14 @@ Arguments and Values:
 form : the form to be parsed.
 keys : the collection of key-value pairs passed to the call.
 enclosing-form : the form that \"contains\" the form beling parsed.
-environment : the environment in which the form is being parsed.
+environment : the environment in which the form is being parsed; it
+              defaults to *CL-GLOBAL-ENV*
 element : a CLAST-ELEMENT representing the AST node just parsed.
 environment1 : the environment resulting from parsing the FORM.
+
+See Also:
+
+*CL-GLOBAL-ENV*
 ")
   )
 
@@ -64,9 +69,14 @@ Arguments and Values:
 form : the form to be parsed.
 keys : the collection of key-value pairs passed to the call.
 enclosing-form : the form that \"contains\" the form beling parsed.
-environment : the environment in which the form is being parsed.
+environment : the environment in which the form is being parsed; it
+              defaults to *CL-GLOBAL-ENV*
 element : a CLAST-ELEMENT representing the AST node just parsed.
 environment1 : the environment resulting from parsing the FORM.
+
+See Also:
+
+*CL-GLOBAL-ENV*, PARSE
 ")
   )
 
@@ -171,7 +181,7 @@ environment1 : the environment resulting from parsing the FORM.
   `(defmethod parse ((form ,self-evaluating-type)
                      &rest keys
                      &key
-                     environment
+                     (environment *cl-global-env*)
                      macroexpand
                      enclosing-form
                      &allow-other-keys)
@@ -207,7 +217,8 @@ environment1 : the environment resulting from parsing the FORM.
 (defun build-variable-reference (v kind local-p decls
                                    &optional
                                    enclosing-form
-                                   environment)
+                                   (environment *cl-global-env*)
+                                   )
   (declare (type symbol v)
            (type boolean local-p)
            (type (member :special :lexical nil) kind)
@@ -457,8 +468,8 @@ environment1 : the environment resulting from parsing the FORM.
   (loop with acc-env = (augment-environment environment)
         for a in forms
         for (a-form a-env)
-        = (multiple-value-list (apply #'parse a :environment acc-env keys))
-        then (multiple-value-list (apply #'parse a :environment a-env keys))
+          = (multiple-value-list (apply #'parse a :environment acc-env keys))
+          then (multiple-value-list (apply #'parse a :environment a-env keys))
         collect a-form into a-forms
         do (setf acc-env a-env)
         finally (return (values a-forms acc-env))))
@@ -489,7 +500,7 @@ environment1 : the environment resulting from parsing the FORM.
   (loop with result-env = (augment-environment environment)
         for (var value) in bindings
         for (bind-form bind-env)
-        = (multiple-value-list (apply #'parse value :environment result-env keys))
+          = (multiple-value-list (apply #'parse value :environment result-env keys))
         collect (list var bind-form) into resulting-bindings
         do (setf result-env
                  (augment-environment bind-env
@@ -546,7 +557,7 @@ environment1 : the environment resulting from parsing the FORM.
                        &allow-other-keys)
   (declare (ignore macroexpand))
 
-  (let ((block-name (second form)) ; Shoould add this a "lexical tag"
+  (let ((block-name (second form)) ; Should add this a "lexical tag"
                                    ; in the environment if not nil.
         )
     (values
@@ -667,15 +678,23 @@ environment1 : the environment resulting from parsing the FORM.
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
-  (values
-   (make-instance 'progn-form
-                  :top enclosing-form
-                  :source form
-                  :body-env environment
-                  :progn (apply #'parse-form-seq (rest form) keys)
-                  )
-   environment)
-  )
+
+  ;; Within a PROGN I may define things, especially it the form is at
+  ;; "top level".
+  ;; Hence I must keep track of the environment as I move along.
+
+  (multiple-value-bind (progn-forms progn-env)
+      (apply #'parse-form-seq (rest form) :environment environment keys)
+        
+    (values
+     (make-instance 'progn-form
+                    :top enclosing-form
+                    :source form
+                    :body-env progn-env
+                    :progn progn-forms
+                    )
+     progn-env)
+    ))
 
 
 (defmethod parse-form ((op (eql 'progv)) form
@@ -794,15 +813,22 @@ environment1 : the environment resulting from parsing the FORM.
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
-  (values
-   (make-instance 'eval-when-form
-                  :situations (second form)
-                  :top enclosing-form
-                  :source form
-                  :body-env environment
-                  :progn (apply #'parse-form-seq (cddr form) keys)
-                  )
-   environment)
+
+  ;; This is essentially a PROGN.  Treat it as such FTTB (2024-06-05).
+
+  (multiple-value-bind (ev-forms ev-env)
+      (apply #'parse-form-seq (cddr form) :environment environment keys)
+        
+
+    (values
+     (make-instance 'eval-when-form
+                    :situations (second form)
+                    :top enclosing-form
+                    :source form
+                    :body-env ev-env
+                    :progn ev-forms
+                    )
+     ev-env))
   )
 
 
