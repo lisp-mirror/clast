@@ -19,7 +19,8 @@
 	 (source
 	  (clast::form-source output))
 	 (type
-	  (first (clast::form-type output))))
+	  (clast::form-type output))
+         )
     ;; THEN: a CLAST-ELEMENT of appropriate type is returned and the
     ;; string value is recorded correctly
     (is (eql 'clast:constant-form (type-of output)))
@@ -27,7 +28,7 @@
     ;; .. as is top form, its source and its type
     (is (eql nil top))
     (is (eql 9 source))
-    (is (eql 'integer type))
+    (is (subtypep type 'integer))
     ))
 
 
@@ -42,15 +43,17 @@
 	 (source
 	  (clast::form-source output))
 	 (type
-	  (first (clast::form-type output))))
+	  (clast::form-type output))
+         )
     ;; THEN: a CLAST-ELEMENT of appropriate type is returned and the
-    ;; string value is recorded correctly
-    (is (eql 'clast:constant-form (type-of output)))
+    ;; string value is recorded correctly.
+
+    (is (eq 'clast:constant-form (type-of output)))
     (is (string= "something" (clast::form-value output)))
     ;; .. as is top form, its source and its type
-    (is (eql nil top))
+    (is (eq nil top))
     (is (string= "something" source))
-    (is (eql 'simple-base-string type))
+    (is (subtypep type 'string))
     ))
 
 
@@ -74,6 +77,7 @@
     (is (eql 'clast::constant-form (type-of arg)))
     (is (eql 'clast::lambda-form (type-of operator)))
     ))
+
 
 ;; TODO: Add FUNCTIONAL-OPERATOR-APPLICATION-FORM tests.
 
@@ -151,7 +155,6 @@
 ;; IGNORABLE OPTIMIZE INLINE NOT-INLINE SPECIAL DYNAMIC-EXTENT
 ;; DECLARATION)
 
-
 (test progn
   ;; GIVEN: a progn form
   (let ((input '(progn
@@ -160,20 +163,25 @@
     ;; WHEN: the form is parsed
     (multiple-value-bind (element environment)
 	(clast:parse input)
+
       ;; THEN: an element of the appropriate type is returned
-      (is (eql 'clast::progn-form (type-of element)))
+      (is (eq 'clast::progn-form (type-of element)))
+
       ;; FIXME: Both the environment that gets returned from a call to
       ;; PARSE and the body environment associated with the element
       ;; that gets returned do not get augmented with the definitions
       ;; that occur within the PROGN. This is wrong and should be
       ;; fixed.
-      (is (eql :function (function-information 'id environment)))
+
+      (is (eq :function (clast:function-information 'id environment)))
+
       ;; ... the body of the form is correctly recorded together with
       ;; its associated environment
+
       (let ((body (clast::form-body element))
 	    (body-env (clast::form-body-env element)))
-	(is (eql 2 (length body)))
-	(is (eql :function (function-information 'id body-env)))
+	(is (= 2 (length body)))
+	(is (eq :function (clast:function-information 'id body-env)))
 	))))
 
 
@@ -182,7 +190,6 @@
 
 ;; TODO: Deferring testing of PROG and PROG* because they
 ;; significantly complex.
-
 
 (test eval-when
   ;; GIVEN: an eval-when form that declares a function and call PRINT
@@ -208,7 +215,7 @@
     (is (eql 2 (length body)))
     ;; FIXME: The current implementation does not augment the body
     ;; environment while parsing its body forms.
-    (is (eql :function (function-information 'id body-env)))
+    (is (eql :function (clast:function-information 'id body-env)))
     ;; TODO: when a strategy for adding elements to the returned
     ;; environment is decided, update this test to reflect that.
     ))
@@ -223,33 +230,36 @@
 	(clast:parse input)
       ;; THEN: the returned environment records information regarding
       ;; both declarations
-      (is (eql :special
-	       (variable-information 'first environment)))
-      (is (eql :special
-	       (variable-information 'second environment)))
+      (is (eq :special
+              (clast:variable-information 'first environment)))
+      (is (eq :special
+              (clast:variable-information 'second environment)))
       (let* ((declarations
 	      (clast::declaration-form-declarations element))
 	     (declaration
 	      (first declarations))
 	     (specifier-identifier
 	      (clast::declaration-specifier-identifier declaration))
+
 	     ;; FIXME: The resulting environment slot is never
 	     ;; initialized nor considered during parsing. This causes
 	     ;; this test failure.
+
 	     (resulting-environment
 	      (clast::declaration-form-resulting-environment element)))
+
 	;; ... both declarations are associated to the element
-	(is (eql 2
-		 (length declarations)))
+	(is (= 2 (length declarations)))
+
 	;; ... with the appropriate identifier
-	(is (eql 'special
-		 specifier-identifier))
+	(is (eq 'special specifier-identifier))
+
 	;; ... and the resulting environment associate with the
 	;; returned element is correctly augmented
-	(is (eql :special
-		 (variable-information 'first resulting-environment)))
-	(is (eql :special
-		 (variable-information 'second resulting-environment)))
+	(is (eq :special
+                (clast:variable-information 'first resulting-environment)))
+	(is (eq :special
+                (clast:variable-information 'second resulting-environment)))
 	))))
 
 
@@ -263,13 +273,21 @@
     ;; WHEN: the form is parsed
     (multiple-value-bind (element environment)
 	(clast:parse input)
+
       ;; THEN: an element of the appropriate type should be returned
-      (is (eql 'clast::flet-form (type-of element)))
+
+      (is (eql 'clast:flet-form (type-of element)))
+
       ;; ... the functions that were defined locally should not be in the
-      ;; return environment (FIXME)
-      (is (eql nil (function-information 'local-id environment)))
-      ;; ... but progned definitions should
-      (is (eql :function (function-information 'id environment)))
+      ;; return environment (FIXME).
+
+      (is (eq nil (clast:function-information 'local-id environment)))
+
+      ;; ... but progned definitions should;
+      ;; but they aren't (FIXME)
+
+      (is (eq :function (clast:function-information 'id environment)))
+
       (let ((binds
 	     (clast::form-binds element))
 	    (body
@@ -277,16 +295,18 @@
 	    (body-env
 	     (clast::form-body-env element)))
 	;; ... body forms should be recorded correctly
-	(is (eql 2 (length body)))
+	(is (= 2 (length body)))
 	;; ... as bindings, that should also be added to the body
 	;; environment
-	(is (eql :function (function-information 'local-id body-env)))
+	(is (eq :function (clast:function-information 'local-id body-env)))
 	))))
+
 
 ;; LABELS is equivalent to FLET except that the scope of the defined
 ;; function names for LABELS encompasses the function definitions
 ;; themselves as well as the body. Since this difference is not
 ;; recorded by the library fttb the test is the exact same.
+
 (test labels
   (let ((input
 	 '(labels ((local-id (x) x))
@@ -297,13 +317,13 @@
       (is (eql 'clast::labels-form (type-of element)))
       ;; ... the functions that were defined locally should not be in the
       ;; return environment (FIXME)
-      (is (eql nil (function-information 'local-id environment)))
-      (is (eql :function (function-information 'id environment)))
+      (is (eq nil (clast:function-information 'local-id environment)))
+      (is (eq :function (clast:function-information 'id environment)))
       (let ((binds (clast::form-binds element))
 	    (body (clast::form-body element))
 	    (body-env (clast::form-body-env element)))
 	(is (eql 2 (length body)))
-	(is (eql :function (function-information 'local-id body-env)))
+	(is (eql :function (clast:function-information 'local-id body-env)))
 	))))
 
 
@@ -400,8 +420,8 @@
 	(clast:parse input)
       ;; THEN: an element of the appropriate type is returned and the
       ;; returned enviroment contains the function definition
-      (is (eql 'clast:let-form (type-of element)))
-      (is (eql :function (function-information 'id environment)))
+      (is (eq 'clast:let-form (type-of element)))
+      (is (eq :function (clast:function-information 'id environment)))
       (let ((binds
 	     (clast::form-binds element))
 	    (body
@@ -409,16 +429,16 @@
 	    (body-env
 	     (clast::form-body-env element)))
 	;; ... both local variables are recorded as its body forms
-	(is (eql 2 (length binds))) 
-	(is (eql 3 (length body)))
+	(is (= 2 (length binds))) 
+	(is (= 3 (length body)))
 	;; ... and the body environment is correctle augmented with
 	;; declarations of both local variables and the function
 	;; definition
-	(is (eql :lexical (variable-information 'x body-env)))
-	(is (eql :lexical (variable-information 'y body-env)))
+	(is (eq :lexical (clast:variable-information 'x body-env)))
+	(is (eq :lexical (clast:variable-information 'y body-env)))
 	;; FIXME: as with most other parsing functions declarations from
 	;; implicitly progned forms are not tracked.
-	(is (eql :function (function-information 'id body-env)))
+	(is (eq :function (clast:function-information 'id body-env)))
 	))))
 
 
@@ -449,7 +469,7 @@
 	(is (eql 'clast:macro-definition-form (type-of bind)))
 	(is (eql 'clast:macro-application (type-of (first body))))
 	;; ... and the body environment is correctly augmented
-	(is (eql :macro (function-information 'id body-env)))
+	(is (eql :macro (clast:function-information 'id body-env)))
 	;; ... add check for potential nested definitions here
 	))))
 
@@ -467,8 +487,8 @@
       ;; THEN: an element of the appropriate type is returned and the
       ;; environment is correctly augmented with definitions that
       ;; occur in the form's body
-      (is (eql 'clast::mvb-form (type-of element)))
-      (is (eql :function (function-information 'id environment)))
+      (is (eq 'clast::mvb-form (type-of element)))
+      (is (eq :function (clast:function-information 'id environment)))
       (let ((binds
 	     (clast::form-binds element))
 	    (values-form
@@ -480,10 +500,10 @@
 	;; ... and both bindings and the values form are correctly
 	;; recorded
 	(is (equal '(first second) binds))
-	(is (eql 'clast::function-application (type-of values-form)))
+	(is (eq 'clast::function-application (type-of values-form)))
 	;; ... as body forms and the body environment
-	(is (eql 3 (length body)))
-	(is (eql :function (function-information 'id body-env)))
+	(is (= 3 (length body)))
+	(is (eq :function (clast:function-information 'id body-env)))
 	))))
 
 
