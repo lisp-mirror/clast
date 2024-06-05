@@ -62,8 +62,11 @@ form."
                (:file "parse"
                 :depends-on ("parse-lambda-lists"))
                
-               (:file "parse-defs"
+               (:file "parse-constants"
                 :depends-on ("parse"))
+
+               (:file "parse-defs"
+                :depends-on ("parse-constants"))
 
                (:file "parse-defstruct"
                 :depends-on ("parse-defs"))
@@ -88,10 +91,10 @@ form."
                )
   )
 
-(mk:defsystem :clast/tests
+(mk:defsystem :clast.tests
     :licence "BSD"
     :documentation "Tests for the CLAST library."
-    :depends-on ("CLAST" "FIVEAM")
+    :depends-on ("CLAST" #-5am "FIVEAM")
     :components ((:module "tests"
                   :components ((:file "clast-tests-package")
 
