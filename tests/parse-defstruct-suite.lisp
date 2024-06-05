@@ -12,7 +12,8 @@
   ;; GIVEN: a struct with one slot and one option
   (let ((input
 	 '(defstruct (person :named)
-	   (name "Matteo" :type string))))
+            (name "Matteo" :type string))))
+
     ;; WHEN: the struct is parsed
     (multiple-value-bind (element environment)
 	(clast:parse input)
@@ -22,61 +23,66 @@
 	     (clast::defstruct-form-options element))
 	    (slots
 	     (clast::defstruct-form-slots element)))
-      ;; THEN: a form of the right type is returned ...
-      (is (eql 'clast:defstruct-form (type-of element)))
-      ;; ... name, slots and options of the DEFSTRUCT are
-      ;; recorded correctly
-      (is (eql 'person name))
-      (is (eql 1 (length options)))
-      (is (eql 1 (length slots)))
-      ;; ... and the environment is augmented with the appropriate
-      ;; create, copy, type-check and slot accessor functions
-      (is (eql :function
-	       (function-information 'make-person environment)))
-      (is (eql :function
-	       (function-information 'copy-person environment)))
-      (is (eql :function
-	       (function-information 'person-p environment)))
-      (is (eql :function
-	       (function-information 'person-name environment)))
-      )))
+
+        ;; THEN: a form of the right type is returned ...
+        (is (eq 'clast:defstruct-form (type-of element)))
+
+        ;; ... name, slots and options of the DEFSTRUCT are
+        ;; recorded correctly
+        (is (eq 'person name))
+        (is (= 1 (length options)))
+        (is (= 1 (length slots)))
+        ;; ... and the environment is augmented with the appropriate
+        ;; create, copy, type-check and slot accessor functions
+        (is (eq :function
+                (clast:function-information 'make-person environment)))
+        (is (eq :function
+                (clast:function-information 'copy-person environment)))
+        (is (eq :function
+                (clast:function-information 'person-p environment)))
+        (is (eq :function
+                (clast:function-information 'person-name environment)))
+        )))
+  )
 
 
 (test defstruct-slots
   ;; GIVEN: a struct with a slot
   (let ((input
-	 '(defstruct person
-	   (name
-	    "Matteo"
-	    :type string
-	    :read-only t
-	    :other 42))))
+         '(defstruct person
+            (name
+             "Matteo"
+             :type string
+             :read-only t
+             :other 42))))
     ;; WHEN: the struct is parsed
     (multiple-value-bind (element environment)
-	(clast:parse input)
+        (clast:parse input)
       (declare (ignore environment))
       (let* ((slots
-	      (clast::defstruct-form-slots element))
-	     (slot
-	      (first slots))
-	     (name
-	      (clast::struct-slot-subform-name slot))
-	     (initform
-	      (clast::struct-slot-subform-initform slot))
-	     (type
-	      (clast::struct-slot-subform-type slot))
-	     (is-read-only
-	      (clast::struct-slot-subform-read-only slot))
-	     (other-options
-	      (clast::struct-slot-subform-other-options slot)))
-	;; THEN: the slot's name, init-form, type, read-only flag and
-	;; etra options are recorded correctly
-	(is (eql 'name name))
-	(is (eql 'clast:constant-form (type-of initform)))
-	(is (eql 'string (clast::type-specifier-form-spec type)))
-	(is (eql t is-read-only))
-	(is (equal '(:other 42) other-options))
-	)))))
+              (clast::defstruct-form-slots element))
+             (slot
+              (first slots))
+             (name
+              (clast::struct-slot-subform-name slot))
+             (initform
+              (clast::struct-slot-subform-initform slot))
+             (type
+              (clast::struct-slot-subform-type slot))
+             (is-read-only
+              (clast::struct-slot-subform-read-only slot))
+             (other-options
+              (clast::struct-slot-subform-other-options slot)))
+        ;; THEN: the slot's name, init-form, type, read-only flag and
+        ;; etra options are recorded correctly
+        (is (eq 'name name))
+        (is (eq 'clast:constant-form (type-of initform)))
+        (is (eq 'string (clast::type-specifier-form-spec type)))
+        (is-true (clast::constant-ref-p is-read-only))
+        (is-true (clast::form-value is-read-only))
+        (is (equal '(:other 42) other-options))
+        )))
+  )
 
 
 (test defstruct-options-conc-name
@@ -84,13 +90,13 @@
   (let ((input
 	 '(defstruct (person (:conc-name "PREFIX-"))
 	   slot-name)))
-    (MULTIPLE-value-bind (element environment)
+    (multiple-value-bind (element environment)
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
       ;; THEN: accessor functions have the same name as their slots,
       ;; prepended with the specified conc-name
-      (is (eql :function
-	       (function-information 'prefix-slot-name environment)))
+      (is (eq :function
+	       (clast:function-information 'prefix--slot-name environment)))
       )))
 
 
@@ -98,14 +104,15 @@
   ;; GIVEN: a struct definition that specifies a nil conc-name
   (let ((input
 	 '(defstruct (person (:conc-name nil))
-	   slot-name)))
+            slot-name)))
     (multiple-value-bind (element environment)
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
       ;; THEN: accessor functions have the same name as their slots
-      (is (eql :function
-	       (function-information 'slot-name environment)))
-      )))
+      (is (eq :function
+              (clast:function-information 'slot-name environment)))
+      ))
+  )
 
 
 (test defstruct-options-constructor
@@ -113,15 +120,16 @@
   (let ((input
 	 '(defstruct (person
 		      (:constructor constructor-name (param)))
-	   slot-name)))
+            slot-name)))
     (multiple-value-bind (element environment)
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
       ;; THEN: a constructor with the specified name and arguments is
       ;; add to the environment
-      (is (eql :function
-	       (function-information 'constructor-name environment)))
-      )))
+      (is (eq :function
+              (clast:function-information 'constructor-name environment)))
+      ))
+  )
 
 
 (test defstruct-options-constructor-multiple
@@ -131,17 +139,22 @@
 	 '(defstruct (person
 		      (:constructor first-constructor (param))
 		      (:constructor second-constructor (param)))
-	   slot-name)))
+
+            slot-name)))
+
+    ;; WHEN: the struct definition is parsed
+
     (multiple-value-bind (element environment)
-	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: a constructor with the specified name and arguments is
       ;; add to the environment
-      (is (eql :function
-	       (function-information 'first-constructor environment)))
-      (is (eql :function
-	       (function-information 'second-constructor environment)))
-      )))
+      (is (eq :function
+              (clast:function-information 'first-constructor environment)))
+      (is (eq :function
+              (clast:function-information 'second-constructor environment)))
+      ))
+  )
 
 
 (test defstruct-options-constructor-nil
@@ -155,8 +168,9 @@
 	(clast:parse input)
       ;; THEN: no constructor for the struct is added to the
       ;; environment
-      (is (eql nil (function-information 'make-person environment)))
-      )))
+      (is (eq nil (clast:function-information 'make-person environment)))
+      ))
+  )
 
 
 (test defstruct-options-copier
@@ -169,9 +183,10 @@
 	(clast:parse input)
       ;; THEN: a copier with the specied name is added to the
       ;; environment
-      (is (eql :function
-	       (function-information 'copier-name environment)))
-      )))
+      (is (eq :function
+	       (clast:function-information 'copier-name environment)))
+      ))
+  )
 
 
 (test defstruct-options-copier-nil
@@ -185,8 +200,9 @@
 	(clast:parse input)
       ;; THEN: no copier for the struct is added to the
       ;; environment
-      (is (eql nil (function-information 'copy-person environment)))
-      )))
+      (is (eq nil (clast:function-information 'copy-person environment)))
+      ))
+  )
 
 
 (test defstruct-options-include
@@ -201,14 +217,18 @@
 	  '(defstruct (person
 		       (:initial-offset 1)
 		       (:type list))
-	    name age))
+             name age))
+
 	 ;; WHEN: the struct definition is parsed
+
 	 (output
 	  (clast:parse input))
 	 (options
 	  (clast::defstruct-form-options output)))
+
     ;; THEN: it records the two options correctly
-    (is (eql 2 (length options)))
+    (is (= 2 (length options)))
+
     ;; ... with appropriate names and value speciefied
     (let* ((type-option
     	    (first options))
@@ -217,7 +237,7 @@
     	   (type-option-spec
     	    (clast::struct-option-subform-spec type-option)))  
 
-      (is (eql :initial-offset type-option-name))
+      (is (eq :initial-offset type-option-name))
       (is (equal '(1) type-option-spec)))
 
     (let* ((initial-offset-option
@@ -227,7 +247,7 @@
     	   (initial-offset-option-spec
     	    (clast::struct-option-subform-spec initial-offset-option)))
 
-      (is (eql :type initial-offset-option-name))
+      (is (eq :type initial-offset-option-name))
       (is (equal '(list) initial-offset-option-spec)))
     ))
 
@@ -242,7 +262,7 @@
 	 (named-option
 	  (second options)))
 
-    (is (eql :named (clast::struct-option-subform-name named-option)))
+    (is (eq :named (clast::struct-option-subform-name named-option)))
     ))
 
 
@@ -250,14 +270,19 @@
   ;; GIVEN: a struct definition that specifies a predicate name option
   (let ((input
 	 '(defstruct (person (:predicate predicate-name)))))
+
     ;; WHEN: the struct definition is parsed
     (multiple-value-bind (element env)
 	(clast:parse input)
+
       ;; THEN: a predicate with the appropriate name is added to the
       ;; environment
-      (is (eql :function
-	       (function-information 'predicate-name env)))
+
+      (is (eq :function
+              (clast:function-information 'predicate-name env)))
+
       ;; ...and the option is recorded correctly
+
       (let* ((options
 	      (clast::defstruct-form-options element))
 	     (predicate-option
@@ -266,7 +291,7 @@
 	      (clast::struct-option-subform-name predicate-option))
 	     (predicate-option-spec
 	      (clast::struct-option-subform-spec predicate-option)))
-      	(is (eql :predicate predicate-option-name))
+      	(is (eq :predicate predicate-option-name))
 	(is (equal '(predicate-name) predicate-option-spec))
 	))))
 
@@ -301,9 +326,10 @@
 	      (clast::struct-option-subform-name type-option))
 	     (type-option-spec
 	      (clast::struct-option-subform-spec type-option)))
-	(is (eql :type type-option-name))
+	(is (eq :type type-option-name))
 	(is (equal '(list) type-option-spec))
-	))))
+	)))
+  )
 
 
 ;;;; end of file -- parse-defstruct-tests.lisp --
