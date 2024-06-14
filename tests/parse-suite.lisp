@@ -222,12 +222,16 @@
 
 
 (test declaim
+
   ;; GIVEN: a declaim form with two declarations
-  (let ((input
-	 '(declaim (special first) (special second))))
+
+  (let ((input '(declaim (special first) (special second))))
+
     ;; WHEN: the form is parsed
+
     (multiple-value-bind (element environment)
 	(clast:parse input)
+
       ;; THEN: the returned environment records information regarding
       ;; both declarations
       (is (eq :special
@@ -270,18 +274,20 @@
 	 '(flet ((local-id (x) x))
 	   (local-id 9)
 	   (defun id (x) x))))
+
     ;; WHEN: the form is parsed
+
     (multiple-value-bind (element environment)
 	(clast:parse input)
 
       ;; THEN: an element of the appropriate type should be returned
 
-      (is (eql 'clast:flet-form (type-of element)))
+      (is (typep element 'clast:flet-form))
 
       ;; ... the functions that were defined locally should not be in the
       ;; return environment (FIXME).
 
-      (is (eq nil (clast:function-information 'local-id environment)))
+      (is (null (clast:function-information 'local-id environment)))
 
       ;; ... but progned definitions should;
       ;; but they aren't (FIXME)
@@ -293,7 +299,17 @@
 	    (body
 	     (clast::form-body element))
 	    (body-env
-	     (clast::form-body-env element)))
+	     (clast::form-body-env element))
+            )
+
+;;;         (format t "~&>>> ~S~%>>> E: ~S~%>>> G: ~S~%"
+;;;                 body-env
+;;;                 (clast::environment-env body-env)
+;;;                 (clast::environment-global-extensions body-env)
+;;;                 )
+;;;         (describe body-env)
+;;;         (terpri)
+
 	;; ... body forms should be recorded correctly
 	(is (= 2 (length body)))
 	;; ... as bindings, that should also be added to the body
@@ -409,18 +425,23 @@
 
 
 (test let
+
   ;; GIVEN: a let form that declares two local variables and with
   ;; three body forms, where one consists of a function declaration
+
   (let ((input
 	 '(let ((x 1) (y 2))
 	   (defun id (x) x)
 	   (print x)
-	   (print y))))
+	   (print y)))
+        )
     (multiple-value-bind (element environment)
 	(clast:parse input)
+
       ;; THEN: an element of the appropriate type is returned and the
       ;; returned enviroment contains the function definition
-      (is (eq 'clast:let-form (type-of element)))
+
+      (is (typep element 'clast:let-form))
       (is (eq :function (clast:function-information 'id environment)))
       (let ((binds
 	     (clast::form-binds element))
@@ -475,20 +496,27 @@
 
 
 (test multiple-value-bind
-  ;; GIVEN: an mvb form that binds two variables and with two forms body
+
+  ;; GIVEN: an mvb form that binds two variables and with two forms body.
+
   (let ((input '(multiple-value-bind (first second)
-		 (values 1 2)
-		 (defun id (x) x)
-		 (print first)
-		 (print second))))
-    ;; WHEN: the form is parsed
+                    (values 1 2)
+                  (defun id (x) x)
+                  (print first)
+                  (print second))))
+
+    ;; WHEN: the form is parsed...
+
     (multiple-value-bind (element environment)
 	(clast:parse input)
+
       ;; THEN: an element of the appropriate type is returned and the
       ;; environment is correctly augmented with definitions that
       ;; occur in the form's body
-      (is (eq 'clast::mvb-form (type-of element)))
+
+      (is (typep element 'clast::mvb-form))
       (is (eq :function (clast:function-information 'id environment)))
+
       (let ((binds
 	     (clast::form-binds element))
 	    (values-form
@@ -496,7 +524,8 @@
 	    (body
 	     (clast::form-body element))
 	    (body-env
-	     (clast::form-body-env element)))
+	     (clast::form-body-env element))
+            )
 	;; ... and both bindings and the values form are correctly
 	;; recorded
 	(is (equal '(first second) binds))
@@ -504,6 +533,7 @@
 	;; ... as body forms and the body environment
 	(is (= 3 (length body)))
 	(is (eq :function (clast:function-information 'id body-env)))
+	(is (eq :function (clast:function-information 'id environment)))
 	))))
 
 
