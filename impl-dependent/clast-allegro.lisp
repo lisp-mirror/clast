@@ -15,8 +15,8 @@
 ;;;; The Magnificent (yet neglected) 7.
 ;;;; CLtL2 environment manipulation manipulation functions.
 ;;;;
-;;;; Franz redefined the order of the return values.  Hence this
-;;;; implementation wrapper is needed.
+;;;; Franz unexplicably redefined the order of the return values.
+;;;; Hence this implementation wrapper is needed.
 
 (defmacro reorder-*information-values-portably (env-function-form)
   `(multiple-value-bind (binding-type
