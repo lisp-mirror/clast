@@ -8,6 +8,9 @@
 ;;;; Environment functions.
 ;;;; Either you have CLtL2 environment functions or your
 ;;;; implementation sucks.
+;;;;
+;;;; The sub-library builds an API to handle "environment trees".
+;;;; This is needed because the parsing/ast machinery needs at least a "global" environment plus
 
 (in-package "CLAST")
 
@@ -39,7 +42,7 @@ See also:
 Hyperspec 3.1.1.1")
 
 
-;;;; env-wrapper --
+;;;; environment --
 ;;;; As correctly noted in CL-WALKER you need to have a hairy
 ;;;; environment structure to pan over incompatibilities.  You need (at least) two
 ;;;; environments: one relative to the "walking" procedure and the other that
@@ -54,35 +57,70 @@ Hyperspec 3.1.1.1")
 ;;;; It would be nice to :include the implementation dependent
 ;;;; environment.  Alas, we cannot assume that the actual
 ;;;; implementation dependent environment is a structure.
+;;;;
+;;;; Notes:
+;;;;
+;;;; 2024-06-11 MA:
+;;;; It turns out that the CLTL2 environment functions, mostly
+;;;; AUGMENT-ENVIRONMENT, cannot really do much with the "global
+;;;; environment". In particular, they cannot directly install a name
+;;;; in it.  Therefore, in order to "parse" definitions that would
+;;;; modify the global environment, I must keep track of a parallel
+;;;; one.
+;;;;
+;;;; 2024-06-11 MA:
+;;;; Decision taken: renamed ENV-WRAPPER to ENVIRONMENT.
 
-(defstruct (env-wrapper (:conc-name %env-wrapper-)
-                        (:constructor %make-env-wrapper (&optional environment)) 
+(defstruct (environment (:constructor %make-environment
+                         (&optional environment
+                                    (global-extensions environment)))
                         )
-  (environment nil) ; The &environment CL environment.
+  (env nil) ; The &environment CL environment.
+  (global-extensions nil)
   )
 
+
+;;;; Environment factory function.
+
+(defgeneric make-env (env-type env &key &allow-other-keys)
+  (:documentation "Create an enviroment of type ENV-TYPE starting from ENV.
+
+The environment ENV can be NIL, representing the \"null environment\",
+as per the Hyperspec."))
+
+
+(defmethod make-env ((env-type (eql 'environment))
+                     (env null)
+                     &key
+                     &allow-other-keys)
+  (%make-environment))
+
+
+(defmethod make-env ((env-type (eql 'environment))
+                     (env environment)
+                     &key
+                     &allow-other-keys)
+  (%make-environment (environment-env env)
+                     (environment-global-extensions env))
+  )
 
 ;;;; Convenience accessor.
 
 (declaim (inline inplementation-env)
-         (ftype (function (env-wrapper) t) inplementation-env))
+         (ftype (function (environment) t) inplementation-env))
 
 (defun implementation-env (ew)
-  (declare (type env-wrapper ew))
-  (%env-wrapper-environment ew))
+  (declare (type environment ew))
+  (environment-env ew))
 
 
 ;;;; is-environment --
 
 (defgeneric is-environment (e)
-  (:method ((ew env-wrapper)) nil) ; To be explicit.
+  (:method ((ew environment)) nil) ; To be explicit.
+  (:method ((ew null)) t) ; NIL is the "null" environment.
   (:method ((ew t)) nil)
   )
-
-
-;;;; environmentp --
-
-(defun environmentp (e) (is-environment e))
 
 
 ;;;; ensure-parsing-environment --
@@ -100,6 +138,5 @@ Hyperspec 3.1.1.1")
          (lisp-implementation-type)
          (lisp-implementation-version)
          ))
-
 
 ;;;; end of file -- env.lisp --
