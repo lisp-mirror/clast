@@ -465,13 +465,20 @@ See Also:
   (declare (type list forms)
            (ignore enclosing-form macroexpand))
 
+  ;; (format t "~&~%>>> PARSE-FORM-SEQ~%")
+
   (loop with acc-env = (augment-environment environment)
         for a in forms
         for (a-form a-env)
           = (multiple-value-list (apply #'parse a :environment acc-env keys))
-          then (multiple-value-list (apply #'parse a :environment a-env keys))
+          then
+          ;; (multiple-value-list (apply #'parse a :environment a-env keys))
+          (multiple-value-list (apply #'parse a :environment acc-env keys))
         collect a-form into a-forms
+        ;; do (format t "~&>>> Form ~S~%" a-form)
         do (setf acc-env a-env)
+        ;; do (describe a-env)
+        ;; do (terpri)
         finally (return (values a-forms acc-env))))
 
 
@@ -861,6 +868,8 @@ See Also:
                        &allow-other-keys)
   (declare (ignore macroexpand))
 
+  ;; The body is a PROGN; treat is as such.
+
   (let* ((functions (second form))
          (body (cddr form))
          (binds (mapcar (lambda (f)
@@ -869,16 +878,33 @@ See Also:
          (ne (augment-environment environment
                                   :function (mapcar #'first functions)))
          )
-    (values
-     (make-instance 'flet-form
-                    :binds binds
-                    :top enclosing-form
-                    :source form
-                    :body-env ne
-                    :progn (apply #'parse-form-seq body
-                                  :environment ne
-                                  keys))
-     environment)
+
+    ;; (format t "~2%>>> PARSE-FORM FLET~%>>> New env ~S~%" ne)
+    ;; (describe ne)
+
+    (multiple-value-bind (flet-body-forms flet-body-env)
+        (apply #'parse-form-seq body :environment ne keys)
+
+;;;       (format t "~2%>>> PARSE-FORM FLET~%>>> Body env ~S~%" flet-body-env)
+;;;       (describe flet-body-env)
+
+;;;       (format t "~&>>> Updating the global environment.~%>>> E:   ~S~%>>> NE:  ~S~%>>> FBE: ~S~%"
+;;;               environment
+;;;               ne
+;;;               flet-body-env)
+
+      (values
+       (make-instance 'flet-form
+                      :binds binds
+                      :top enclosing-form
+                      :source form
+                      :body-env flet-body-env
+                      :progn flet-body-forms
+                      )
+       ;; flet-body-env
+       (update-global-env environment
+                          (environment-global-extensions flet-body-env))
+       ))
     ))
 
 
@@ -891,6 +917,8 @@ See Also:
                        &allow-other-keys)
   (declare (ignore macroexpand))
 
+  ;; The body is a PROGN; treat is as such.
+
   (let* ((functions (second form))
          (body (cddr form))
          (ne (augment-environment environment
@@ -898,20 +926,24 @@ See Also:
          (binds (mapcar (lambda (f)
                           (apply #'parse-local-function
                                  f
-                                 :environment ne
+                                 :environment ne ; Key difference with FLET.
                                  keys))
                         functions))
          )
-    (values
-     (make-instance 'labels-form
-                    :binds binds
-                    :top enclosing-form
-                    :source form
-                    :body-env ne
-                    :progn (apply #'parse-form-seq body
-                                  :environment ne
-                                  keys))
-     environment)
+
+    (multiple-value-bind (labels-body-forms labels-body-env)
+        (apply #'parse-form-seq body :environment ne keys)
+      (values
+       (make-instance 'labels-form
+                      :binds binds
+                      :top enclosing-form
+                      :source form
+                      :body-env labels-body-env
+                      :progn labels-body-forms
+                      )
+       (update-global-env environment
+                          (environment-global-extensions labels-body-env))
+       ))
     ))
 
 
@@ -1103,24 +1135,30 @@ See Also:
                        &allow-other-keys)
   (declare (ignore macroexpand))
   (let* ((normalized-bindings (listify (second form)))
-         (parsed-bindings (mapcar (lambda (b)
-                                    (list (first b)
-                                          (apply #'parse (second b)
-                                                 keys)))
+         (parsed-bindings (mapcar #'(lambda (b)
+                                      (list (first b)
+                                            (apply #'parse (second b)
+                                                   keys)))
                                   normalized-bindings))
          (ne (augment-environment environment
                                   :variable (mapcar #'first normalized-bindings)))
          )
-    (values (make-instance 'let-form
-                           :binds parsed-bindings
-                           :progn (apply #'parse-form-seq (cddr form)
-                                         :environment ne
-                                         keys)
-                           :body-env ne
-                           :top enclosing-form
-                           :source form
-                           )
-            environment)))
+
+    (multiple-value-bind (let-body-forms let-body-env)
+        (apply #'parse-form-seq (cddr form) :environment ne keys)
+
+      (values
+       (make-instance 'let-form
+                      :binds parsed-bindings
+                      :progn let-body-forms
+                      :body-env let-body-env
+                      :top enclosing-form
+                      :source form
+                      )
+       (update-global-env environment
+                          (environment-global-extensions let-body-env))
+       ))
+    ))
 
 
 (defmethod parse-form ((op (eql 'let*)) form
@@ -1211,16 +1249,24 @@ See Also:
                                        :variable
                                        (copy-list (second form))))
         )
-    (values (make-instance 'mvb-form
-                           :binds (second form)
-                           :top enclosing-form
-                           :source form
-                           :values-form (apply #'parse (third form) keys)
-                           :body-env body-env
-                           :progn (apply #'parse-form-seq (cdddr form)
-                                         :environment body-env
-                                         keys))
-            environment)
+
+    ;; The parsing of the value form may change the global environment.
+    ;; This is a general problem that I have not handled yet.
+
+    (multiple-value-bind (mvb-body mvb-env)
+        (apply #'parse-form-seq (cdddr form) :environment body-env keys)
+      (values
+       (make-instance 'mvb-form
+                      :binds (second form)
+                      :top enclosing-form
+                      :source form
+                      :values-form (apply #'parse (third form) keys) ; Iffy.
+                      :body-env mvb-env
+                      :progn mvb-body
+                      )
+       (update-global-env environment
+                          (environment-global-extensions mvb-env))
+       ))
     ))
 
 
@@ -1523,16 +1569,16 @@ See Also:
   (loop with result-env = env
         for d in decls
         for (parsed-decl new-env)
-        = (multiple-value-list (parse-declaration (first d)
-                                                  d
-                                                  :environment env
-                                                  :enclosing-form enclosing-form
-                                                  :macroexpand macroexpand))
-        then (multiple-value-list (parse-declaration (first d)
-                                                     d
-                                                     :environment new-env
-                                                     :enclosing-form enclosing-form
-                                                     :macroexpand macroexpand))
+          = (multiple-value-list (parse-declaration (first d)
+                                                    d
+                                                    :environment env
+                                                    :enclosing-form enclosing-form
+                                                    :macroexpand macroexpand))
+          then (multiple-value-list (parse-declaration (first d)
+                                                       d
+                                                       :environment new-env
+                                                       :enclosing-form enclosing-form
+                                                       :macroexpand macroexpand))
         collect parsed-decl into parsed-decls
         do (setf result-env new-env)
         finally (return (values parsed-decls result-env))))
@@ -1551,7 +1597,9 @@ See Also:
   (let ((dsf (make-instance 'id-declaration-specifier-form
                             :id di
                             :top enclosing-form
-                            :source d))
+                            :source d
+                            :resulting-environment environment
+                            ))
         )
     (values dsf environment)
     ))
