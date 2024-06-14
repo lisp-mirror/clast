@@ -43,6 +43,7 @@ The return values include the augmented environment.
                     :top enclosing-form
                     :source form)
      (augment-environment environment
+                          :global t
                           :variable (list var-name)
                           :declare (list `(special ,var-name))
                           )))
@@ -79,6 +80,7 @@ The return values include the augmented environment.
                     :top enclosing-form
                     :source form)
      (augment-environment environment
+                          :global t
                           :variable (list var-name)
                           :declare (list `(special ,var-name))
                           )))
@@ -103,6 +105,7 @@ The return values include the augmented environment.
            (ll-vars (ll-vars parsed-ll))
            (new-env
             (augment-environment environment
+                                 :global t
                                  :function (list f-name)
                                  ))
            (f-body-env
@@ -146,6 +149,7 @@ The return values include the augmented environment.
 		     environment))
            (new-env
 	    (augment-environment environment
+                                 :global t
 				 :macro (list (list m-name m-def))))
            (m-body-env
             (augment-environment new-env
@@ -184,6 +188,7 @@ The return values include the augmented environment.
            ;; (ll-vars (ll-vars parsed-ll))
            (gf-env
             (augment-environment environment
+                                 :global t
                                  :function (list gf-name)
                                  ))
            (options (remove :method opts-and-meths
@@ -244,6 +249,7 @@ The return values include the augmented environment.
             (if (function-information gf-name environment) ; The GF may already be there.
                 environment
                 (augment-environment environment
+                                     :global t
                                      :function (list gf-name)
                                      )))
            (m-body-env
@@ -291,6 +297,7 @@ The return values include the augmented environment.
 		       (enclose (parse-macro m-name ll m-body environment)
 				environment)))
 		  (augment-environment environment
+                                       :global t
 				       :macro (list (list m-name m-def))
 				       ))))
            (m-body-env
@@ -334,6 +341,7 @@ The return values include the augmented environment.
 		     environment))
            (new-env
             (augment-environment environment
+                                 :global t
                                  :macro (list (list dmm-name ddm-def))
                                  ))
            (m-body-env
