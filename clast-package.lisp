@@ -51,10 +51,12 @@ smaller and broken rocks.")
   (:export
    ;; Environments.
 
+   "ENVIRONMENT"
+
    "ENSURE-PARSING-ENVIRONMENT"
 
    "IS-ENVIRONMENT"
-   "ENVIRONMENTP"
+   "ENVIRONMENT-P"
    )
   
 

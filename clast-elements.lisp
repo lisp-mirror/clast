@@ -36,7 +36,18 @@
         )
    (source :accessor form-source
            :initarg :source
+           :documentation
+           "The source form of the ... form."
            )
+   #| This is probably just useful here.
+
+   (env :accessor form-environment
+        :initarg :environment
+        :initform nil ; Valid null lexical environment.
+        :documentation
+        "The environment the form is parsed in."
+        )
+   |#
    )
   (:documentation "The FORM Class.
 
