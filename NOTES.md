@@ -28,3 +28,28 @@ not quite work as expected.  There are two issues:
 
 Hence the current modifications in the branch `env-tree`.
 
+
+2024-06-13 Handling of global environments semi-working.
+--------------------------------------------------------
+
+Fixed the gross problems, however, the handling of the global
+environment is still iffy and not general.
+
+Things do work as long as there are no "definitions", "proclamations"
+or similar "usually top level" forms in subforms.
+
+
+2024-06-14 Environments notes.
+------------------------------
+
+It may be easier, eventually to really just keep the "global"
+environment... global.  This will require a whole reworking of the API
+and of the code.
+
+Also, in order to fix some issues with the processing of declarations
+and proclamations, FTTB, it may be useful to have an "environment"
+slot in the `form` instances, although this may become unduly
+expensive.
+
+
+
