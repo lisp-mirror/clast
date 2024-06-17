@@ -769,7 +769,7 @@ list of declarations, accessible via FORMS-DECLARATIONS.")
 The class representing quoted expressions.")
   )
 
-(defun quote-form-p (x) (typep x 'quoted-form))
+(defun quote-form-p (x) (typep x 'quote-form))
 
 
 (defclass return-from-form (form)
