@@ -150,11 +150,21 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
     :named))
 
 
+#|
 (defun default-structure-fname (struct-name &rest names)
   (declare (type symbol struct-name))
-  (intern
-   (apply #'format nil "~A-~A" names)
-   (symbol-package struct-name)))
+  (intern (apply #'format nil "~A~A" names)
+          (symbol-package struct-name)))
+|#
+
+
+(defun default-structure-fname (prefix fname &optional (package *package*))
+  (declare (type symbol struct-name))
+  (intern ;; (apply #'format nil "~A~A" names)
+          (format nil "~A~A" prefix fname)
+          ;; (symbol-package struct-name)
+          package
+          ))
 
 
 (defun build-cons-key-arglist-types (parsed-slots)
@@ -179,6 +189,7 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
 (defun add-function-to-env (env fname args-decl return-type)
   (augment-environment
    env
+   :global t ; The functions are "added" globally.
    :function (list fname)
    :declare `((ftype (function ,args-decl ,return-type) ,fname))
    ))
@@ -226,9 +237,10 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                                 &key
                                 (default-constructor-name
                                  (default-structure-fname
+                                  'make-
                                   struct-name
-                                  'make
-                                  struct-name))
+                                  (symbol-package struct-name))
+                                 )
                                 default-copier-name
                                 default-predicate-name
                                 )
@@ -279,9 +291,10 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                                 default-constructor-name
                                 (default-copier-name
                                  (default-structure-fname
+                                  'copy-
                                   struct-name
-                                  'copy
-                                  struct-name))
+                                  (symbol-package struct-name))
+                                 )
                                 default-predicate-name
                                 )
   (declare (ignore default-constructor-name
@@ -324,8 +337,9 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                                 (default-predicate-name
                                  (default-structure-fname
                                   struct-name
-                                  struct-name
-                                  'p))
+                                  '-p
+                                  (symbol-package struct-name))
+                                 )
                                 )
   ;; Practically a duplicate of the :COPIER method.
 
@@ -456,10 +470,10 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
 
   (destructuring-bind (superstruct &rest slot-descriptions)
       include-option
-    #|
+    
     (warn "CLAST: uninplemented and incomplete parsing of DEFSTRUCT ~
-                          :include options: slot modifiers still unimplemented.")
-    |#
+                  :include options: slot modifiers still unimplemented.")
+    
     (multiple-value-bind (parsed-slots parsed-slots-env)
         (parse-struct-slots struct-name struct-name slot-descriptions env ()) ; The () is wrong.
       (declare (ignore parsed-slots-env))
@@ -533,7 +547,7 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                    default-predicate-name))
   (destructuring-bind (&optional
                        (cn
-                        (intern (format nil "~A-" struct-name)
+                        (intern (format nil "~A-" struct-name) ; Cfr., ANSI spec.
                                 (symbol-package struct-name)) ; A bit pointless...
                         conc-name-supplied)
                        )
@@ -564,11 +578,11 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
         ;; Add the slot reader.
         (setf new-env
               (add-function-to-env parsed-slot-env
-                                   (default-structure-fname struct-name
-                                                            conc-name
+                                   (default-structure-fname conc-name
                                                             ;; (first parsed-slot)
                                                             (struct-slot-subform-name
                                                              parsed-slot)
+                                                            (symbol-package struct-name)
                                                             )
                                    (list struct-name)
                                    (type-specifier-form-spec
@@ -669,11 +683,14 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
 
            (struct-name name)
 
+           (struct-name-pkg (symbol-package struct-name))
+
            (options (typecase name-n-options
-                      (cons (ensure-lists (rest name-n-options)))))
+                      (cons (ensure-lists (rest name-n-options))))) ; Everything listified.
 
            (docstring (when (stringp (first spec))
-                        (parse (first spec) :environment environment)))
+                        (parse (first spec)
+                               :environment environment))) 
 
            (slots (if docstring
                       (ensure-lists (rest spec))
@@ -682,13 +699,16 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
            ;; Options unpacking.
            (default-conc-name
             (default-structure-fname struct-name
-                                     struct-name
-                                     ""))
+                                     "-"
+                                     (symbol-package struct-name)
+                                     ))
 
            (conc-name (if name-is-symbol
                           default-conc-name
                           (let ((conc-name-opt
-                                 (find :conc-name options :test #'eq :key #'first)))
+                                 (find :conc-name options
+                                       :test #'eq
+                                       :key #'first)))
                             (cond ((and conc-name-opt (second conc-name-opt))
                                    (second conc-name-opt))
                                   (conc-name-opt '||)
@@ -696,19 +716,22 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                       )
 
            (default-constructor-name
-            (default-structure-fname struct-name
-                                     'make
-                                     struct-name))
+            (default-structure-fname 'make-
+                                     struct-name
+                                     struct-name-pkg
+                                     ))
 
            (default-copier-name
-            (default-structure-fname struct-name
-                                     'copy
-                                     struct-name))
+            (default-structure-fname 'copy-
+                                     struct-name
+                                     struct-name-pkg
+                                     ))
 
            (default-predicate-name
             (default-structure-fname struct-name
-                                     struct-name
-                                     'p))
+                                     '-p
+                                     struct-name-pkg
+                                     ))
 
   
            (parsed-opts ())
@@ -723,7 +746,9 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                      conc-name)
                )
 
-      (labels ((parse-slot (slot env
+      (labels (
+               #|
+               (parse-slot (slot env
                                  &aux
                                  (slot-name (first slot))
                                  (spec (rest slot)))
@@ -754,6 +779,7 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                           (new-env
                            (augment-environment
                             env
+                            :global t
                             :function (list slot-accessor-name)
                             :declare (list `(ftype (function (,name) ,type)
                                                    ,slot-accessor-name))))
@@ -761,13 +787,16 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
                      (values (list* slot-name parsed-initform slot-keys)
                              new-env)))
                  )
+               |#
 
+               #|
                (parse-slots (slots env &aux (new-env env))
                  (dolist (o slots new-env)
                    (multiple-value-bind (parsed-slot parsed-slot-env)
                        (parse-slot o new-env)
                      (push parsed-slot parsed-slots)
                      (setf new-env parsed-slot-env))))
+               |#
 
                (select-opts (opt-kwd options)
                  (remove opt-kwd options :key #'first :test-not #'eq))
