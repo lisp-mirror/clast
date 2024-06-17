@@ -94,17 +94,21 @@
 
 
 (test defstruct-options-conc-name
+
   ;; GIVEN: a struct definition that specifies a value for conc-name
+
   (let ((input
 	 '(defstruct (person (:conc-name "PREFIX-"))
 	   slot-name)))
     (multiple-value-bind (element environment)
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: accessor functions have the same name as their slots,
-      ;; prepended with the specified conc-name
+      ;; prepended with the specified conc-name.
+
       (is (eq :function
-	       (clast:function-information 'prefix--slot-name environment)))
+	       (clast:function-information 'prefix-slot-name environment)))
       )))
 
 
@@ -214,8 +218,9 @@
 
 
 (test defstruct-options-include
-  (5am:fail "Parsing of include options from DEFSTRUCT forms is not ~
-  yet implemented"))
+  (5am:fail
+   "Parsing of include options from DEFSTRUCT forms is not ~
+    yet implemented."))
 
 
 (test defstruct-options-initial-offset

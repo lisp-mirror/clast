@@ -103,7 +103,9 @@
 
 
 (test defun-types
-  ;; GIVEN: a function with a type declarations
+
+  ;; GIVEN: a function with a type declarations.
+
   (let* ((input
 	  '(defun fixnum-id (id)
 	    (declare (type fixnum x))
@@ -119,7 +121,7 @@
 
     ;; This needs to be fixed.
 
-    (fiveam:fail))
+    (fiveam:fail "Test not yet implemented."))
   )
 
 
@@ -198,17 +200,25 @@
 
 
 (test define-compile-macro-form
-  ;; GIVEN: a compiler macro that does nothing
+
+  ;; GIVEN: a compiler macro that does nothing.
+
   (let ((input
 	 '(define-compiler-macro id (x) x)))
-    ;; WHEN: the macro is parsed
+
+    ;; WHEN: the macro is parsed.
+
     (multiple-value-bind (element env)
 	(clast:parse input)
+
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
-      (is (eq 'clast::define-compiler-macro-form (type-of element)))
-      ;; ... the environment is correctly augmented
+
+      (is (typep element 'clast::define-compiler-macro-form))
+
+      ;; ... the environment is correctly augmented...
       (is (eq :macro (clast:function-information 'id env)))
+
       (let ((name
 	     (clast::define-compiler-macro-form-name element))
 	    (lambda-list
@@ -217,15 +227,16 @@
 	     (clast::form-body-env element))
 	    (progn-forms
 	     (clast::form-progn element)))
+
 	;; ... the macro name is correctly noted
 	(is (eq 'id name))
-	;; ... as the lambda list
-	(is (eq 'clast::macro-lambda-list (type-of lambda-list)))
+	;; ... as the lambda list ...
+	(is (typep lambda-list 'clast::macro-lambda-list))
 	;; ... its body environment
 	(is (eq :lexical (clast:variable-information 'x body-env)))
 	(is (eq :macro (clast:function-information 'id body-env)))
 	;; ... and subforms
-	(is (eq 'clast::block-form (type-of progn-forms)))
+	(is (typep progn-forms 'clast::block-form))
 	))))
 
 
