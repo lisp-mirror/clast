@@ -59,3 +59,11 @@ The "global" environment handling is kludgy.  This is necessary, FTTB,
 to smooth differences among different implementations.  But there must
 be a better way, even given the constraint to keep the CLtL2
 environments in place.
+
+
+2024-06-18 Need to refactor code.
+---------------------------------
+
+As expected and feared, SCBL complains.  But it does have a point and
+I should really refactor the code in order to have **all** the
+implementation dependent code loaded before the top level one.
