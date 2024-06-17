@@ -4,9 +4,9 @@ CLAST
 Copyright (c) 2014-2020 Marco Antoniotti and Matteo Crespi, all rights reserved.
 Copyright (c) 2020-2024 Marco Antoniotti, all rights reserved.
 
-CLAST is a Common Lisp library that can produce an "abstract syntax
-tree" of a "form".  Its main use is for source analysis and
-transformation, e.g., extracting the "free variables" list from a
+CLAST is a Common Lisp library that can produce an *abstract syntax
+tree* of a *form*.  Its main use is for source analysis and
+transformation, e.g., extracting the *free variables* list from a
 form.
 
 The library relies on a working implementation of the "environment"
