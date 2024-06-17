@@ -42,8 +42,9 @@
 (defmethod make-env ((env-type (eql 'parsing-environment))
                      (env null)
                      &key
+                     (global-extensions nil)
                      &allow-other-keys)
-  (%make-parsing-environment))
+  (%make-parsing-environment env global-extensions))
 
 
 (defmethod make-env ((env-type (eql 'parsing-environment))
@@ -413,8 +414,8 @@ This is a destructive function."
 
     (parsing-environment
      (setf (environment-global-extensions env) global-env)
-     env)))
-     
+     env))
+  )
 
 
 ;;; define-declaration --
