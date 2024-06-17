@@ -846,17 +846,97 @@ See Also:
                        environment
                        macroexpand
                        &allow-other-keys)
-  (values
-   (make-instance 'declaim-form
-                  :top enclosing-form
-                  :source form
-                  :declarations (parse-declarations (rest form)
-                                                    environment
-                                                    enclosing-form
-                                                    macroexpand)
-                  )
-   environment)
-  )
+
+  (multiple-value-bind (pdecls denv)
+      (parse-declarations (rest form)
+                          environment
+                          enclosing-form
+                          macroexpand)
+
+    ;; (mapcar #'describe pdecls)
+    ;; (terpri)
+
+    ;; Now I need to collect all the declarations and change to
+    ;; (global) environment.
+
+    (let ((type-decls)
+          (ftype-decls)
+          (decl-decls)
+          (optimize-decls)
+          (special-decls)
+          (other-decls)
+          (vars)
+          (funs)
+          (declaim-env denv)
+          )
+
+      (declare (type list
+                     type-decls
+                     ftype-decls
+                     decl-decls
+                     optimize-decls
+                     special-decls
+                     other-decls
+                     vars
+                     funs
+                     ))
+
+      ;; This can become a function.
+      
+      (dolist (d pdecls)
+        (etypecase d
+          (type-declaration-specifier-form (push d type-decls))
+          (ftype-declaration-specifier-form (push d ftype-decls))
+          (id-declaration-specifier-form
+           (case (declaration-specifier-form-identifier d)
+             (declaration (push d decl-decls))
+             (optimize (push d optimize-decls))
+             (special (push d special-decls))
+             (t (push d other-decls)))
+           ))
+        )
+      
+      (psetq type-decls  (nreverse type-decls)
+             ftype-decls (nreverse ftype-decls)
+             decl-decls  (nreverse decl-decls)
+             optimize-decls (nreverse optimize-decls)
+             special-decls  (nreverse special-decls)
+             other-decls    (nreverse other-decls)
+             )
+      (psetq vars
+             (flatten
+              (append (mapcar #'declaration-type-spec-symbols type-decls)
+                      (mapcar #'declaration-type-spec-symbols special-decls)))
+
+             funs
+             (mapcan #'declaration-type-spec-symbols ftype-decls)
+             )
+
+      ;; (format t "~&>>> VARS ~S~%>>> FUNS ~S~%>>> DECL ~S~2%"
+      ;;         vars funs (rest form))
+
+      (setq declaim-env
+            (augment-environment declaim-env
+                                 :variable vars
+                                 :function funs
+                                 :declare (rest form)
+                                 :global t))
+
+      ;; (describe declaim-env)
+
+      ;; (format t "~&>>> VAR INFO 'second ~S~%"
+      ;;         (multiple-value-list (variable-information 'second declaim-env)))
+
+      (values
+       (make-instance 'declaim-form
+                      :top enclosing-form
+                      :source form
+                      :declarations pdecls
+                      :resulting-environment declaim-env
+                      )
+       declaim-env
+       ))
+    ))
 
 
 (defmethod parse-form ((op (eql 'flet)) form
@@ -1598,7 +1678,7 @@ See Also:
                             :id di
                             :top enclosing-form
                             :source d
-                            :resulting-environment environment
+                            ;; :resulting-environment environment
                             ))
         )
     (values dsf environment)
@@ -1622,6 +1702,9 @@ See Also:
                             ))
          )
     ;; Now we change 'environment'.
+    ;; I really need to ensure that the variables are present in the
+    ;; environment.
+
     (values df
             (augment-environment environment
                                  :declare (mapcar (lambda (v)
@@ -1648,7 +1731,11 @@ See Also:
                             :source d
                             ))
          )
+
     ;; Now we change 'environment'.
+    ;; I really need to ensure that the functions are present in the
+    ;; environment.
+
     (values df
             (augment-environment environment
                                  :declare (mapcar (lambda (v)
@@ -1675,6 +1762,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     ;; Now we should change 'environment'.
     (values df environment)
     ))
@@ -1696,6 +1787,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     ;; Now we should change 'environment'.
     (values df environment)
     ))
@@ -1717,6 +1812,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     ;; Now we should change 'environment'.
     (values df environment)
     ))
@@ -1738,6 +1837,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     ;; Now we should change 'environment'.
     (values df environment)
     ))
@@ -1759,6 +1862,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     ;; Now we should change 'environment'.
     (values df environment)
     ))
@@ -1780,7 +1887,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
-    ;; Now we should change 'environment'.
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     (values df environment)
     ))
 
@@ -1801,7 +1911,10 @@ See Also:
                            ))
         )
     (declare (ignore vars))
-    ;; Now we should change 'environment'.
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     (values df environment)
     ))
 
@@ -1821,8 +1934,11 @@ See Also:
                            :source d
                            ))
         )
-    (declare (ignore vars))
-    ;; Now we should change 'environment'.
+    (declare (ignore names))
+
+    ;; The environment is unchanged as the declaration must be handled
+    ;; at the DECLARE, PROCLAIM or DECLAIM level.
+
     (values df environment)
     ))
 
