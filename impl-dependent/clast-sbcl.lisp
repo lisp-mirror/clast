@@ -51,7 +51,7 @@
   (ensure-parsing-environment))
 
 
-(declaim (inline get-implementation-env)
+(declaim ;; (inline get-implementation-env) ; SBCL complains.
          (ftype (function ((or null
                                parsing-environment
                                sb-kernel:lexenv))
