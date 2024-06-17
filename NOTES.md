@@ -52,4 +52,10 @@ slot in the `form` instances, although this may become unduly
 expensive.
 
 
+2024-06-17 Need to rework environments.
+---------------------------------------
 
+The "global" environment handling is kludgy.  This is necessary, FTTB,
+to smooth differences among different implementations.  But there must
+be a better way, even given the constraint to keep the CLtL2
+environments in place.
