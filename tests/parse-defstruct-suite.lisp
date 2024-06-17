@@ -9,14 +9,17 @@
 (in-suite :parse-defstruct)
 
 (test defstruct
-  ;; GIVEN: a struct with one slot and one option
+  ;; GIVEN: a struct with one slot and one option.
+
   (let ((input
 	 '(defstruct (person :named)
             (name "Matteo" :type string))))
 
     ;; WHEN: the struct is parsed
+
     (multiple-value-bind (element environment)
 	(clast:parse input)
+
       (let ((name
 	     (clast::defstruct-form-name element))
 	    (options
@@ -25,13 +28,15 @@
 	     (clast::defstruct-form-slots element)))
 
         ;; THEN: a form of the right type is returned ...
-        (is (eq 'clast:defstruct-form (type-of element)))
+
+        (is (typep element 'clast:defstruct-form))
 
         ;; ... name, slots and options of the DEFSTRUCT are
         ;; recorded correctly
         (is (eq 'person name))
         (is (= 1 (length options)))
         (is (= 1 (length slots)))
+
         ;; ... and the environment is augmented with the appropriate
         ;; create, copy, type-check and slot accessor functions
         (is (eq :function
@@ -40,6 +45,9 @@
                 (clast:function-information 'copy-person environment)))
         (is (eq :function
                 (clast:function-information 'person-p environment)))
+
+        ;; Next test fails 2024-06-17
+
         (is (eq :function
                 (clast:function-information 'person-name environment)))
         )))
