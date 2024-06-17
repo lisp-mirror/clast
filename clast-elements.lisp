@@ -352,6 +352,8 @@ SPEC slot is always 'as is', i.e., not parsed.")
 ;;;---------------------------------------------------------------------------
 ;;; Declarations
 
+;;; declaration-form
+
 (defclass declaration-form (form)
   ((decls :accessor declaration-form-declarations
           :initarg :declarations
@@ -367,6 +369,12 @@ The class of all 'declarations' in Common Lisp.")
 
 (defun declaration-form-p (x) (typep x 'declaration-form))
 
+
+;;; declaration-specifier-form
+;;; tf-declaration-specifier-form
+;;; type-declaration-specifier-form
+;;; ftype-declaration-specifier-form
+;;; id-declaration-specifier-form
 
 (defclass declaration-specifier-form (form)
   ((identifier :accessor declaration-specifier-form-identifier
@@ -427,6 +435,14 @@ OPTIMIZE declarations.")
 
 (defun id-declaration-specifier-form-p (x)
   (typep x 'id-declaration-specifier-form))
+
+
+(defmethod declaration-type-spec-symbols ((idd id-declaration-specifier-form))
+  (case (declaration-specifier-identifier idd)
+    (special (rest (form-source idd)))
+    ((noinline inline) (rest (form-source idd)))
+    (t ())
+    ))
 
 
 ;;;---------------------------------------------------------------------------
