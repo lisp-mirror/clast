@@ -4,15 +4,29 @@
 ;;;; Various rendering of clast-elements.
 ;;;;
 ;;;; See file COPYING in main folder for licensing and copyright information.
+;;;;
+;;;; Notes:
+;;;;
+;;;; 2024-06-18 MA:
+;;;; This file creates some unwanted dependencies.  The methods in
+;;;; here are moved with the class/structure definitions.
 
 (in-package "CLAST")
 
 
+;;; Useful parameters.
+
 (defparameter *clast-print-level* 3)
 (defparameter *clast-print-length* 4)
 
-(defgeneric as-string (form))
 
+;;; as-string --
+
+(defgeneric as-string (form)
+  (:documentation "Return a string representation of FORM."))
+
+
+;;; form methods.
 
 (defmethod print-object ((f form) out)
   (let ((*print-level* *clast-print-level*)
@@ -27,6 +41,8 @@
   (string-downcase (format nil "~A" (type-of f))))
 
 
+;;; constant-form methods.
+
 (defmethod print-object ((cf constant-form) out)
   (print-unreadable-object (cf out :identity t)
     (format out "CONSTANT ~S" (form-value cf))))
@@ -35,32 +51,8 @@
 (defmethod as-string ((cf constant-form))
   (format nil "constant ~S" (form-value cf)))
 
-#|
-(defclass binding-form (form)
-  ((binds :accessor form-binds
-          :initarg :binds
-          :initform ()
-          )
-   ))
 
-
-(defclass vbinding-form (binding-form) ())
-
-
-(defclass fbinding-form (binding-form) ())
-
-
-(defclass implicit-progn ()
-  ((iprogn-forms :accessor form-progn
-                 :initarg :progn
-                 :initform ())
-   (body-env :accessor form-body-env
-             :initarg :body-env
-             :initform () #| (make-env) |#
-             )
-   ))
-|#
-
+;;; variable-ref  methods.
 
 (defmethod print-object ((vr variable-ref) out)
   (print-unreadable-object (vr out :identity t)
@@ -71,6 +63,8 @@
   (format nil "variable ref ~A" (form-symbol vr)))
 
 
+;;; constant-ref  methods.
+
 (defmethod print-object ((vr constant-ref) out)
   (print-unreadable-object (vr out :identity t)
     (format out "CONSTANT REF ~S" (form-symbol vr))))
@@ -79,6 +73,8 @@
 (defmethod as-string ((vr constant-ref))
   (format nil "constant ref ~A" (form-symbol vr)))
 
+
+;;; free-variable-ref methods.
 
 (defmethod print-object ((vr free-variable-ref) out)
   (print-unreadable-object (vr out :identity t)
@@ -89,6 +85,8 @@
   (format nil "free variable ref ~A" (form-symbol vr)))
 
 
+;;; special-variable-ref methods.
+
 (defmethod print-object ((vr special-variable-ref) out)
   (print-unreadable-object (vr out :identity t)
     (format out "SPECIAL VARIABLE REF ~S" (form-symbol vr))))
@@ -97,6 +95,8 @@
 (defmethod as-string ((vr special-variable-ref))
   (format nil "special variable ref ~A" (form-symbol vr)))
 
+
+;;; symbol-macro-ref methods.
 
 (defmethod print-object ((vr symbol-macro-ref) out)
   (print-unreadable-object (vr out :identity t)
@@ -107,12 +107,7 @@
   (format nil "~S symbol macro ref ~A" vr (form-symbol vr)))
 
 
-#|
-(defclass application (form)
-  ((operator :accessor form-operator :initarg :operator)
-   (args     :accessor form-args     :initarg :arguments)))
-|#
-
+;;; function-name-ref methods.
 
 (defmethod print-object ((vr function-name-ref) out)
   (print-unreadable-object (vr out :identity t)
@@ -123,6 +118,8 @@
   (format nil "function name ref ~A" (form-symbol vr)))
 
 
+;;; macro-name-ref methods.
+
 (defmethod print-object ((vr macro-name-ref) out)
   (print-unreadable-object (vr out :identity t)
     (format out "MACRO NAME REF ~S" (form-symbol vr))))
@@ -132,30 +129,7 @@
   (format nil "macro name ref ~A" (form-symbol vr)))
 
 
-#|
-(defclass function-application (application) ())
-
-
-(defclass lambda-application (function-application) ())
-
-
-(defclass functional-operator-application (function-application)
-  ()
-  (:documentation "The Functional Operator Application CLass.
-
-This class represents functional applications where the operator is
-non-standard with respect to the Common Lisp Standard; i.e.,
-applications where the operator is not a symbol or a lambda expression."))
-
-
-(defclass local-function-application (function-application) ())
-
-
-(defclass macro-application (application expansion-component) ())
-
-
-(defclass local-macro-application (macro-application) ())
-|#
+;;; type-specifier-form methods.
 
 (defmethod print-object ((tsf type-specifier-form) stream)
   (print-unreadable-object (tsf stream :identity t)
@@ -167,53 +141,9 @@ applications where the operator is not a symbol or a lambda expression."))
   (format nil "type specifier ~A" (type-specifier-form-spec tsf)))
 
 
-#|
-(defclass declaration-form (form)
-  ((decls :accessor declaration-form-declarations
-          :initarg :declarations
-          )
-   (new-env :accessor declaration-form-resulting-environment
-            :accessor form-resulting-environment
-            :initarg :resulting-environment)
-   )
-  )
-
-
-(defclass declaration-specifier-form (form)
-  ((identifier :accessor declaration-specifier-form-identifier
-               :accessor declaration-specifier-identifier
-               )
-   )
-  )
-
-
-(defclass tf-declaration-specifier-form (declaration-specifier-form)
-  ((type-spec :accessor declaration-type-spec
-              :initarg :spec)
-   (symbol-refs :accessor declaration-type-spec-symbols
-                :initarg :symbols)
-   )
-  )
-
-
-(defclass type-declaration-specifier-form (tf-declaration-specifier-form)
-  ((identifier :initform 'type))
-  )
-
-
-(defclass ftype-declaration-specifier-form (tf-declaration-specifier-form)
-  ((identifier :initform 'ftype))
-  )
-
-
-(defclass id-declaration-specifier-form (declaration-specifier-form)
-  ((identifier :initarg :id)
-   )
-  )
-
-
 ;;;; "composite" forms.
-|#
+
+;;; block-name-ref methods.
 
 (defmethod print-object ((bn block-name-ref) stream)
   (print-unreadable-object (bn stream :identity t)
@@ -301,6 +231,7 @@ applications where the operator is not a symbol or a lambda expression."))
   )
 |#
 
+;;; go-tag methods.
 
 (defmethod print-object ((gt go-tag) stream)
   (print-unreadable-object (gt stream :identity t)
@@ -434,6 +365,8 @@ applications where the operator is not a symbol or a lambda expression."))
   )
 |#
 
+
+;;; quote-form methods.
 
 (defmethod print-object ((qf quote-form) out)
   (print-unreadable-object (qf out :identity t)

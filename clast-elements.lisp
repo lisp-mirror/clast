@@ -13,7 +13,10 @@
 ;;;
 ;;; Top class just for convenience.
 
-(defclass clast-element () ())
+(defclass clast-element () ()
+  (:documentation "The CLast Element Class.
+
+The top element class."))
 
 (defun is-clast-element (x)
   (typep x 'clast-element))
