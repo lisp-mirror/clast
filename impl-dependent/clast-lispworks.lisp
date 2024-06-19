@@ -39,6 +39,8 @@
 (defmethod is-environment ((e sys::augmented-environment)) t)
 
 
+;;; make-env methods.
+
 (defmethod make-env ((env-type (eql 'parsing-environment))
                      (env null)
                      &key
@@ -146,7 +148,7 @@
 ;;;; The Magnificent (yet neglected) 7; plus 2.
 ;;;; CLtL2 environment manipulation manipulation functions.
 
-;;; global-env-item-info --
+;;; env-item-info --
 ;;;
 ;;; Auxiliary function used in the *-information functions.
 
