@@ -49,7 +49,7 @@ which 'accumulates' the effects of parsing.")
             parsed-slots
             keys
             )
-   (declare (ignore class-env parsed-slots keys))
+   (declare (ignore parsed-slots keys))
    (warn "Unrecognized or unimplemented parser for class option ~S in class ~S."
          opt-name
          class-name)
@@ -265,7 +265,9 @@ which 'accumulates' the effects of parsing.")
       (dolist (slot slots)
         (multiple-value-bind (parsed-slot parsed-slot-env)
 	    ;; Check the ENV argument! It is so as per ANSI.
-            (parse-class-slot class-name class-form slot env keys) 
+            (parse-class-slot class-name class-form slot env keys)
+
+	  (declare (ignore parsed-slot-env))
           (push parsed-slot parsed-slots)))
 
       ;; Now we have done a first pass over the slot options.
@@ -381,7 +383,7 @@ which 'accumulates' the effects of parsing.")
                        macroexpand
                        &allow-other-keys)
 
-  (declare (ignore macroexpand enclosing-form))
+  (declare (ignore macroexpand))
 
   (destructuring-bind (dc-kwd name superclasses slots &rest options)
       form

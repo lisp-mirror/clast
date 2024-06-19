@@ -330,14 +330,16 @@ The return values include the augmented environment.
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore macroexpand))
+  (declare (ignore macroexpand keys))
   (destructuring-bind (dmm-kwd dmm-name ll fun &optional docstring)
       form
     (declare (ignore dmm-kwd))
     (let* ((parsed-ll (parse-ll :define-modify-macro ll))
+	   
            (ll-vars (ll-vars parsed-ll))
+	   
 	   (ddm-def
-	    (enclose (parse-macro m-name ll m-body environment)
+	    (enclose (parse-macro dmm-name ll fun environment) ; This may be wrong.
 		     environment))
            (new-env
             (augment-environment environment

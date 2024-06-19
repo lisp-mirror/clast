@@ -149,7 +149,7 @@ applied, via REDUCE to the resulting sequence.
                  environment
                  ;; op-first ; boolean
                  &allow-other-keys)
-  (declare (ignore environment))
+  (declare (ignore environment keys))
   
   (when (plusp (count-lambda-list-vars ce))
     (warn "CLAST: lambda list walking not yet implemented; lambda list ~A."
@@ -169,7 +169,7 @@ applied, via REDUCE to the resulting sequence.
                  environment
                  ;; op-first ; boolean
                  &allow-other-keys)
-  (declare (ignore environment))
+  (declare (ignore environment keys))
   (warn "CLAST: walking a form for which no structure is yet known: ~A."
         ce)
   (concatenate result-type ())
@@ -275,7 +275,7 @@ result : a LIST of SYMBOLS."
   (walk form
         :map (lambda (e)
                (typecase e
-                 (symbol-macro-name-ref (list (form-symbol e)))))
+                 (symbol-macro-ref (list (form-symbol e)))))
         ))
 
 ;;;; end of file -- walk.lisp --

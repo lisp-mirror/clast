@@ -1315,7 +1315,7 @@ new-env             : a possibly augmented env.
                               &key
                               &allow-other-keys
                               )
-  (declare (ignore form clauses env))
+  (declare (ignore form clauses env keys))
   (error 'ast-parse-error
          :format-control "Illegal LOOP syntax: THEN keyword found as clause head."))
 
@@ -1328,7 +1328,7 @@ new-env             : a possibly augmented env.
                               &key
                               &allow-other-keys
                               )
-  (declare (ignore form clauses env))
+  (declare (ignore form clauses env keys))
   (error 'ast-parse-error
          :format-control "Illegal LOOP syntax: ELSE keyword found as clause head."))
 
@@ -1341,7 +1341,7 @@ new-env             : a possibly augmented env.
                               &key
                               &allow-other-keys
                               )
-  (declare (ignore form clauses env))
+  (declare (ignore form clauses env keys))
   (error 'ast-parse-error
          :format-control "Illegal LOOP syntax: END keyword found as clause head."))
 

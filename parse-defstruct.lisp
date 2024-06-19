@@ -42,7 +42,7 @@
 
 
 (defun default-structure-fname (prefix fname &optional (package *package*))
-  (declare (type symbol struct-name))
+  (declare (type symbol prefix))
   (intern ;; (apply #'format nil "~A~A" names)
           (format nil "~A~A" prefix fname)
           ;; (symbol-package struct-name)
@@ -485,7 +485,7 @@
   (declare (type list slot)
            (ignore struct-name))
   (destructuring-bind (slot-name
-                       &optional
+		       ;; &optional
                        (slot-initform nil slot-initform-supplied)
                        &rest slot-keys
                        &key
@@ -534,13 +534,25 @@
                          slot-name
                          parsed-initform
                          new-slot-keys)
-                  (make-struct-slot-form slot-name))
+                  (make-struct-slot-form slot-name nil))
               env)))
   )
 
 
 ;;;---------------------------------------------------------------------------
 ;;; parse-form defstruct
+
+(defun normalize-slot (slot)
+  (etypecase slot
+    (null (error 'ast-parse-error
+		 :format-control "Trying to nomalize a NULL slot."))
+    (symbol (list slot nil))
+    (list (if (>= (list-length slot) 2)
+	      slot
+	      (list (first slot) nil)))
+    )
+  )
+	      
 
 (defmethod parse-form ((op (eql 'defstruct)) form
                        &rest keys
@@ -576,8 +588,8 @@
                                :environment environment))) 
 
            (slots (if docstring
-                      (ensure-lists (rest spec))
-                      (ensure-lists spec)))
+		      (mapcar #'normalize-slot (rest spec))
+		      (mapcar #'normalize-slot spec)))
 
            ;; Options unpacking.
            (default-conc-name

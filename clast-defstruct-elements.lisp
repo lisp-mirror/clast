@@ -61,7 +61,6 @@ The forms representing the slots in a 'defstruct'.")
 
 
 (defun make-struct-slot-form (slot-name
-                              &optional
                               initform
                               &rest keys
                               &key

@@ -847,6 +847,8 @@ See Also:
                        macroexpand
                        &allow-other-keys)
 
+  (declare (ignore keys))
+
   (multiple-value-bind (pdecls denv)
       (parse-declarations (rest form)
                           environment
@@ -1083,7 +1085,7 @@ See Also:
                        environment
                        macroexpand
                        &allow-other-keys)
-  (declare (ignore enclosing-form macroexpand))
+  (declare (ignore macroexpand))
   (values (make-instance 'if-form
 			 :top enclosing-form
 			 :source form
