@@ -62,6 +62,8 @@ The top of the FORMs hierarchy."))
 (defun form-p (x)
   (typep x 'form))
 
+;;;---------------------------------------------------------------------------
+;;; EXPANSION-COMPONENT
 
 (defclass expansion-component (clast-element)
   ((expansion :accessor form-expansion

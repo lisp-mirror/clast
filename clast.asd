@@ -16,6 +16,15 @@ form."
                (:file "clast-elements"
                 :depends-on ("clast-package"))
 
+               (:file "clast-defclass-elements"
+                :depends-on ("clast-elements"))
+
+               (:file "clast-defstruct-elements"
+                :depends-on ("clast-elements"))
+
+               (:file "clast-loop-elements"
+                :depends-on ("clast-elements"))
+
                (:module "utilities"
                 :components ((:file "lambda-list-parsing")
                              (:file "kitchen-sink"))
@@ -26,6 +35,9 @@ form."
 
                (:module "impl-dependent"
                 :depends-on ("clast-elements"
+                             "clast-defclass-elements"
+                             "clast-defstruct-elements"
+                             "clast-loop-elements"
                              "clast-printing"
                              "env")
                 :components (
@@ -65,19 +77,19 @@ form."
                 :depends-on ("parse"))
 
                (:file "parse-defstruct"
-                :depends-on ("parse-defs"))
+                :depends-on ("clast-defstruct-elements" "parse-defs"))
 
                (:file "parse-defclass"
-                :depends-on ("parse-defs"))
+                :depends-on ("clast-defclass-elements" "parse-defs"))
 
                (:file "parse-loop"
-                :depends-on ("parse"))
+                :depends-on ("clast-loop-elements" "parse"))
                
                (:file "clast-printing"
-                :depends-on ("parse-defstruct"
-                             "parse-defclass"
-                             "parse-loop"
-                             "parse"))
+                :depends-on ("clast-defstruct-elements"
+                             "clast-defclass-elements"
+                             "clast-loop-elements"
+                             ))
 
                (:file "walk"
                 :depends-on ("parse" "parse-loop"))
