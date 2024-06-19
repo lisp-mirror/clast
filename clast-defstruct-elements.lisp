@@ -154,7 +154,7 @@ for :CONSTRUCTOR, :COPIER and :PREDICATE.")
 
 
 ;;;----------------------------------------------------------------------------
-;;; defstruct-form
+;;; defstruct-form methods
 
 (defmethod clast-element-subforms ((df defstruct-form))
   (list* (defstruct-form-name df)

@@ -21,7 +21,7 @@ form."
                (:file "clast-defclass-elements"
                 :depends-on ("clast-elements"))
 
-               (:file "clast-defclass-elements"
+               (:file "clast-defstruct-elements"
                 :depends-on ("clast-elements"))
                
                (:file "clast-loop-elements"
