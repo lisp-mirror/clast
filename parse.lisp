@@ -14,6 +14,9 @@
 
 (in-package "CLAST")
 
+
+#| This is moved to 'clast-parse-protocol.lisp'
+
 ;;;;===========================================================================
 ;;;; Interface
 
@@ -47,8 +50,7 @@ environment1 : the environment resulting from parsing the FORM.
 
 See Also:
 
-*CL-GLOBAL-ENV*
-")
+*CL-GLOBAL-ENV*")
   )
 
 
@@ -76,8 +78,7 @@ environment1 : the environment resulting from parsing the FORM.
 
 See Also:
 
-*CL-GLOBAL-ENV*, PARSE
-")
+*CL-GLOBAL-ENV*, PARSE")
   )
 
 
@@ -118,6 +119,9 @@ See Also:
              (unknown-operator-name usoe))))
   )
 
+;;; All of the above is in 'clast-parse-protocol.lisp'
+|#
+
 
 ;;;;===========================================================================
 ;;;; Implementation
@@ -128,7 +132,7 @@ See Also:
 
 
 (declaim (ftype (function (cons) t) operator)
-         (ftype (function (cons) cons) arguments)
+         (ftype (function (cons) list) arguments)
          (inline operator arguments)
          )
 
@@ -282,6 +286,8 @@ See Also:
     ))
 
 
+;;; parse symbol
+
 (defmethod parse ((s symbol)
                   &rest keys
                   &key
@@ -354,13 +360,23 @@ See Also:
       )))
 
 
+;;; parse cons
+;;; The reliance on "constantp" is an inherently
+;;; implementation-dependent.
+;;; Now I explore alternatives.
+
 (defmethod parse ((form cons)
                   &rest keys
                   &key
                   environment
                   enclosing-form
                   &allow-other-keys)
-  (if (and (constantp form environment)
+  (if (and (constantp form
+                      (if (typep environment 'environment)
+                          (environment-env environment)
+                          environment)) ; This is VERY iffy. CONSTANTP
+                                        ; is inherently implementation
+                                        ; depedent.
            (not (is-quoted-form form)))
       (values (make-instance 'constant-form ;
                              :type (type-of form)
@@ -370,6 +386,25 @@ See Also:
               environment)
       (apply #'parse-form (operator form) form keys)
       ))
+
+#|
+(defmethod parse ((form cons)
+                  &rest keys
+                  &key
+                  environment
+                  enclosing-form
+                  &allow-other-keys)
+  (if (not (is-quoted-form form))
+      ;; Only (real) quoted forms are "constant"; see above.
+      (values (make-instance 'constant-form ;
+                             :type (type-of form)
+                             :source form
+                             :top enclosing-form
+                             :value form)
+              environment)
+      (apply #'parse-form (operator form) form keys)
+      ))
+|#
 
 
 ;;;;---------------------------------------------------------------------------
@@ -1709,6 +1744,7 @@ See Also:
 
     (values df
             (augment-environment environment
+                                 :variable vars
                                  :declare (mapcar (lambda (v)
                                                     (list 'type
                                                           (second d)

@@ -6,6 +6,8 @@
 ;;;; Environment functions.
 ;;;; Either you have CLtL2 environment functions or your
 ;;;; implementation sucks.
+;;;;
+;;;; See file COPYING for copyright and license information.
 
 (in-package "CLAST")
 

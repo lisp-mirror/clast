@@ -239,7 +239,8 @@ new-env             : a possibly augmented env.
                               macroexpand
                               environment
                               &allow-other-keys)
-  (declare (ignore macroexpand keys))
+  (declare (ignorable clauses env) ; Allegro 11.x whines otherwise.
+           (ignore macroexpand keys))
   (let ((loop-name (second form)))
     (unless (symbolp loop-name)
       (error 'ast-parse-error
@@ -307,7 +308,8 @@ new-env             : a possibly augmented env.
                               macroexpand
                               environment
                               &allow-other-keys)
-  (declare (ignore enclosing-form macroexpand environment))
+  (declare (ignorable clauses) ; Allegro 11.x whines about this.
+           (ignore enclosing-form macroexpand environment))
   (labels ((parse-var-spec (rest-form with-subclauses vars)
              (let ((var-spec (second rest-form))
                    (var-type t)
@@ -399,7 +401,8 @@ new-env             : a possibly augmented env.
                               (subclause-vars ())
                               (subclause-var-types ())
                               )
-  (declare (ignore enclosing-form macroexpand environment))
+  (declare (ignorable clauses) ; Avoid Allegro 11.x whining.
+           (ignore enclosing-form macroexpand environment))
 
   ;; The variable FOR-AS-CLAUSE in each subfunction below is an
   ;; initially empty list that contains the actual FOR clauses joined

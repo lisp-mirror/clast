@@ -11,4 +11,7 @@
 
 2024-06-05	Fix environment handling in some form parsing.
 
+2024-06-20	Go back and check use of CONSTANTP (which is inherently
+		implementation-dependent).
+
 

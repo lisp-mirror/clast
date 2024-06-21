@@ -430,4 +430,34 @@ This is a destructive function."
   )
 
 
+;;;---------------------------------------------------------------------------
+;;; parse protocol specialization
+
+(defvar *comma-kind* (list :value :splice :nconc))
+
+
+;;; This is needed because SBCL handles backquotes diffrently from,
+;;; e.g., LW, which is rather straightforward.
+
+(defmethod parse ((form sb-impl::comma) &rest keys
+                  &key
+                  enclosing-form ; Eventually there should be a
+                                 ; (sb-int::quasiquote ...) form.
+                  macroexpand
+                  environment
+                  &allow-other-keys)
+
+  (declare (ignore enclosing-form macroexpand keys))
+                   
+  (multiple-value-bind (bqc-expr bqc-env)
+      (parse (sb-impl::comma-expr form) :environment environment)
+    (values
+     (make-instance 'bq-comma
+                    :kind (nth (sb-impl::comma-kind form) *comma-kind*)
+                    :expr bqc-expr)
+     (update-global-env environment
+                        (environment-global-extensions bqc-env))
+     )))
+
+
 ;;;; end of file -- clast-sbcl.lisp --

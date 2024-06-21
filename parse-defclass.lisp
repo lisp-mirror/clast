@@ -49,7 +49,11 @@ which 'accumulates' the effects of parsing.")
             parsed-slots
             keys
             )
-   (declare (ignore parsed-slots keys))
+   (declare
+    ;; Allegro 11.x whines otherwise...
+    (ignorable enclosing-env)
+    (ignore parsed-slots keys))
+
    (warn "Unrecognized or unimplemented parser for class option ~S in class ~S."
          opt-name
          class-name)
@@ -65,7 +69,11 @@ which 'accumulates' the effects of parsing.")
                                 parsed-slots
                                 keys
                                 )
-  (declare (ignore parsed-slots))
+  (declare
+   ;; Allegro 11.x whines otherwise...
+   (ignorable class-name class-env)
+   (ignore parsed-slots))
+
   (values (make-class-option-form
            di-kwd
            (loop for (initarg initform) on di-option by #'cddr
@@ -84,7 +92,11 @@ which 'accumulates' the effects of parsing.")
                                 parsed-slots
                                 keys
                                 )
-  (declare (ignore parsed-slots))
+  (declare
+   ;; Allegro 11.x whines otherwise...
+   (ignorable class-name enclosing-env)
+   (ignore parsed-slots))
+
   (values (make-class-option-form
            doc-kwd
            (apply #'parse (first doc-option)
@@ -102,7 +114,11 @@ which 'accumulates' the effects of parsing.")
                                 parsed-slots
                                 keys
                                 )
-  (declare (ignore parsed-slots))
+  (declare
+   ;; Allegro 11.x whines otherwise...
+   (ignorable class-name enclosing-env)
+   (ignore parsed-slots))
+
   (values (make-class-option-form
            metac-kwd
 	   (apply #'parse (first metac-option)
@@ -117,6 +133,7 @@ which 'accumulates' the effects of parsing.")
                                        parsed-class-options
                                        (new-env env)
                                        )
+
   (dolist (opt options
                (values (nreverse parsed-class-options)
                        new-env))
@@ -151,6 +168,10 @@ which 'accumulates' the effects of parsing.")
             enclosing-env
             class-env
             keys)
+
+   (declare ; Allegro 11.x whines otherwise...
+    (ignorable enclosing-env keys))
+
    (warn "Unrecognized or unimplemented class slot option ~A for ~
           slot ~A in class ~A."
          option
@@ -168,6 +189,8 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
   (values (list :reader option-value)
           class-env))
 
@@ -179,6 +202,8 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
   (values (list :writer option-value)
           class-env))
 
@@ -190,6 +215,8 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
   (values (list :accessor option-value)
           class-env))
 
@@ -201,6 +228,8 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
   (values (list :initarg option-value)
           class-env))
 
@@ -212,8 +241,11 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
   (values (list :allocation option-value)
           class-env))
+
 
 (defmethod parse-class-slot-option ((option (eql :type))
                                     option-value
@@ -222,6 +254,8 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
   (values (list :type option-value)
           class-env))
 
@@ -233,6 +267,9 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare ; Allegro 11.x whines otherwise...
+   (ignorable class-name slot-name enclosing-env keys))
+
   (values (list :documentation option-value)
           class-env))
 
@@ -244,6 +281,8 @@ which 'accumulates' the effects of parsing.")
                                     enclosing-env
                                     class-env
                                     keys)
+  (declare (ignorable class-name slot-name class-env)) ; Allegro 11.x whines.
+
   (multiple-value-bind (element env)
       (parse option-value enclosing-env keys)
 
@@ -402,12 +441,5 @@ which 'accumulates' the effects of parsing.")
                                :options parsed-opts)
                 parsed-opts-env)
         ))))
-
-
-(defmethod clast-element-subforms ((df defclass-form))
-  (list* (defclass-form-name df)
-         (defclass-form-options df)
-         (defclass-form-slots df)))
-
 
 ;;;; end of file -- parse-defclass.lisp --

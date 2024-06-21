@@ -13,7 +13,7 @@
 
   (let ((input
 	 '(defstruct (person :named)
-            (name "Matteo" :type string))))
+            (name "Ugo" :type string))))
 
     ;; WHEN: the struct is parsed
 
@@ -55,15 +55,17 @@
 
 
 (test defstruct-slots
-  ;; GIVEN: a struct with a slot
+  ;; GIVEN: a struct with a slot.
+
   (let ((input
          '(defstruct person
-            (name
-             "Matteo"
-             :type string
-             :read-only t
-             :other 42))))
+            (name "Ugo"
+                  :type string
+                  :read-only t
+                  :other 42)))
+        )
     ;; WHEN: the struct is parsed
+
     (multiple-value-bind (element environment)
         (clast:parse input)
       (declare (ignore environment))
@@ -80,7 +82,8 @@
              (is-read-only
               (clast::struct-slot-subform-read-only slot))
              (other-options
-              (clast::struct-slot-subform-other-options slot)))
+              (clast::struct-slot-subform-other-options slot))
+             )
         ;; THEN: the slot's name, init-form, type, read-only flag and
         ;; etra options are recorded correctly
         (is (eq 'name name))
@@ -99,14 +102,17 @@
 
   (let ((input
 	 '(defstruct (person (:conc-name "PREFIX-"))
-	   slot-name)))
+	   slot-name))
+        )
     (multiple-value-bind (element environment)
+
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
 
       ;; THEN: accessor functions have the same name as their slots,
       ;; prepended with the specified conc-name.
 
+      (is (typep element 'clast:defstruct-form))
       (is (eq :function
 	       (clast:function-information 'prefix-slot-name environment)))
       )))
@@ -116,11 +122,15 @@
   ;; GIVEN: a struct definition that specifies a nil conc-name
   (let ((input
 	 '(defstruct (person (:conc-name nil))
-            slot-name)))
+            slot-name))
+        )
     (multiple-value-bind (element environment)
+
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: accessor functions have the same name as their slots
+      (is (typep element 'clast:defstruct-form))
       (is (eq :function
               (clast:function-information 'slot-name environment)))
       ))
@@ -129,15 +139,20 @@
 
 (test defstruct-options-constructor
   ;; GIVEN: a struct definition that specifies a constructor option
+
   (let ((input
 	 '(defstruct (person
 		      (:constructor constructor-name (param)))
             slot-name)))
+
     (multiple-value-bind (element environment)
+
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: a constructor with the specified name and arguments is
       ;; add to the environment
+      (is (typep element 'clast:defstruct-form))
       (is (eq :function
               (clast:function-information 'constructor-name environment)))
       ))
@@ -161,6 +176,7 @@
 
       ;; THEN: a constructor with the specified name and arguments is
       ;; add to the environment
+      (is (typep element 'clast:defstruct-form))
       (is (eq :function
               (clast:function-information 'first-constructor environment)))
       (is (eq :function
@@ -172,29 +188,38 @@
 (test defstruct-options-constructor-nil
   ;; GIVEN: a struct definition that specifies that no constructor
   ;; should be generated
+
   (let ((input
 	 '(defstruct (person (:constructor nil))
 	   slot-name)))
+
     (multiple-value-bind (element environment)
+
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: no constructor for the struct is added to the
       ;; environment
-      (is (eq nil (clast:function-information 'make-person environment)))
+      (is (typep element 'clast:defstruct-form))
+      (is (null (clast:function-information 'make-person environment)))
       ))
   )
 
 
 (test defstruct-options-copier
   ;; GIVEN: a struct definition that specifies a name for the copier
+
   (let ((input
 	 '(defstruct (person (:copier copier-name))
 	   slot-name)))
     (multiple-value-bind (element environment)
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: a copier with the specied name is added to the
       ;; environment
+
+      (is (typep element 'clast:defstruct-form))
       (is (eq :function
 	       (clast:function-information 'copier-name environment)))
       ))
@@ -204,15 +229,19 @@
 (test defstruct-options-copier-nil
   ;; GIVEN: a struct definition that specifies that no copier should
   ;; be generated
+
   (let ((input
 	 '(defstruct (person (:copier nil))
 	   slot-name)))
     (multiple-value-bind (element environment)
+
 	;; WHEN: the struct definition is parsed
 	(clast:parse input)
+
       ;; THEN: no copier for the struct is added to the
       ;; environment
-      (is (eq nil (clast:function-information 'copy-person environment)))
+      (is (typep element 'clast:defstruct-form))
+      (is (null (clast:function-information 'copy-person environment)))
       ))
   )
 

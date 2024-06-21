@@ -5,6 +5,7 @@
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
 (mk:defsystem "CLAST"
+  :author "Marco Antoniotti"
   :licence "BSD"
   :documentation "CLAST is a Common Lisp library that can produce an \"abstract syntax
 tree\" of a \"form\".  Its main use is for source analysis and
@@ -27,6 +28,18 @@ form."
                (:file "clast-loop-elements"
                 :depends-on ("clast-elements"))
 
+               (:file "clast-bq-elements"
+                :depends-on ("clast-elements"))
+
+               (:file "clast-parse-protocol"
+                :depends-on ("clast-package"))
+
+               (:file "clast-printing"
+                :depends-on ("clast-defstruct-elements"
+                             "clast-defclass-elements"
+                             "clast-loop-elements"
+                             ))
+
                (:module "utilities"
                 :components ("lambda-list-parsing"
                              "kitchen-sink")
@@ -41,6 +54,7 @@ form."
                              "clast-defstruct-elements"
                              "clast-loop-elements"
                              "clast-printing"
+                             "clast-parse-protocol"
                              "env")
                 :components (
                              #+ccl
@@ -72,7 +86,7 @@ form."
                 :depends-on ("clast-elements" "env" "utilities"))
                
                (:file "parse"
-                :depends-on ("parse-lambda-lists"))
+                :depends-on ("clast-parse-protocol" "parse-lambda-lists"))
                
                (:file "parse-constants"
                 :depends-on ("parse"))
@@ -89,12 +103,6 @@ form."
                (:file "parse-loop" ;
                 :depends-on ("clast-loop-elements" "parse"))
           
-               (:file "clast-printing"
-                :depends-on ("clast-defstruct-elements"
-                             "clast-defclass-elements"
-                             "clast-loop-elements"
-                             ))
-
                (:file "walk"
                 :depends-on ("parse" "parse-loop"))
 
@@ -104,30 +112,35 @@ form."
   )
 
 (mk:defsystem :clast.tests
-    :licence "BSD"
-    :documentation "Tests for the CLAST library."
-    :depends-on ("CLAST" #-5am "FIVEAM")
-    :components ((:module "tests"
-                  :components ((:file "clast-tests-package")
+  :author "Marco Antoniotti"
+  :licence "BSD"
+  :documentation "Tests for the CLAST library."
+  :depends-on ("CLAST" #-5am "FIVEAM")
+  
+  :source-extension "lisp"
+  :binary-pathname "_clastbin"
 
-                               (:file "suites"
-                                :depends-on ("clast-tests-package"))
+  :components ((:module "tests"
+                :components ((:file "clast-tests-package")
 
-                               (:file "parse-defclass-suite"
-                                :depends-on ("suites"))
+                             (:file "suites"
+                              :depends-on ("clast-tests-package"))
 
-                               (:file "parse-defs-suite"
-                                :depends-on ("suites"))
+                             (:file "parse-defclass-suite"
+                              :depends-on ("suites"))
 
-                               (:file "parse-defstruct-suite"
-                                :depends-on ("suites"))
+                             (:file "parse-defs-suite"
+                              :depends-on ("suites"))
 
-                               (:file "parse-loop-suite"
-                                :depends-on ("suites"))
+                             (:file "parse-defstruct-suite"
+                              :depends-on ("suites"))
 
-                               (:file "parse-suite"
-                                :depends-on ("suites"))
-                               )))
+                             (:file "parse-loop-suite"
+                              :depends-on ("suites"))
+
+                             (:file "parse-suite"
+                              :depends-on ("suites"))
+                             )))
       )
 
 ;;;; end of file -- clast.system --

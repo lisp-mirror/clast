@@ -42,7 +42,7 @@
 
 
 (defun default-structure-fname (prefix fname &optional (package *package*))
-  (declare (type symbol prefix))
+  (declare (type (or character string symbol) prefix))
   (intern ;; (apply #'format nil "~A~A" names)
           (format nil "~A~A" prefix fname)
           ;; (symbol-package struct-name)
@@ -127,8 +127,9 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-copier-name
-                   default-predicate-name))
+  (declare
+   (ignore default-copier-name
+           default-predicate-name))
 
   (destructuring-bind (&optional (cname nil cname-supplied) arglist)
       cons-option
@@ -180,8 +181,11 @@
                                  )
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable parsed-slots)
+   (ignore default-constructor-name
+           default-predicate-name))
 
   (destructuring-bind (&optional (copier-fname nil copier-supplied))
       copier-option
@@ -226,8 +230,11 @@
                                 )
   ;; Practically a duplicate of the :COPIER method.
 
-  (declare (ignore default-constructor-name
-                   default-copier-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name))
 
   (destructuring-bind (&optional (predicate-fname nil predicate-supplied))
       predicate-option
@@ -264,9 +271,12 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
 
   (destructuring-bind (&optional (printer-fname nil printer-supplied-p))
       printer-option
@@ -305,9 +315,12 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
 
   (destructuring-bind (&optional (printer-fname nil printer-supplied-p))
       printer-option
@@ -347,9 +360,12 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
 
   (destructuring-bind (superstruct &rest slot-descriptions)
       include-option
@@ -375,9 +391,13 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable struct-name parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
+  
   (values (make-struct-option-form :type (first type-option)) env))
 
 
@@ -391,9 +411,13 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable struct-name parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
+
   (values (make-struct-option-form :initial-offset
 				   (first init-offset-option))
           env))
@@ -409,9 +433,13 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable named-option struct-name parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
+
   (values (make-struct-option-form :named) env))
 
 
@@ -425,9 +453,13 @@
                                 default-copier-name
                                 default-predicate-name
                                 )
-  (declare (ignore default-constructor-name
-                   default-copier-name
-                   default-predicate-name))
+  (declare
+   ;; Avoid Allegro 11.x whining.
+   (ignorable parsed-slots)
+   (ignore default-constructor-name
+           default-copier-name
+           default-predicate-name))
+
   (destructuring-bind (&optional
                        (cn
                         (intern (format nil "~A-" struct-name) ; Cfr., ANSI spec.
@@ -485,8 +517,10 @@
   (declare (type list slot)
            (ignore struct-name))
   (destructuring-bind (slot-name
-		       ;; &optional
-                       (slot-initform nil slot-initform-supplied)
+		       slot-initform
+		       ;; &optional ; Usual unbeleivably annoying
+		       ;; SBCL!!! See below.
+                       ;; (slot-initform nil slot-initform-supplied)
                        &rest slot-keys
                        &key
                        (type t type-key-supplied)
@@ -503,12 +537,25 @@
     (let ((new-slot-keys (copy-list slot-keys))
           (parsed-initform nil)
           )
+      #| ;; Usual unbelievably annoying and fascist SBCL! Why deos it
+         ;; have to breakl our balls when the code is conforming and we
+         ;; know what we are doing?  And no!  The note about "style
+         ;; warnings" and the "poor compiler" is BS.
+      
       (when slot-initform-supplied
         (setf parsed-initform
               (apply #'parse slot-initform
                      :environment env
                      keys))
-        )
+      )
+      |#
+      (when slot-initform
+        (setf parsed-initform
+              (apply #'parse slot-initform
+                     :environment env
+                     keys))
+	)
+      
       (when type-key-supplied
         (setf (getf new-slot-keys :type)
               (make-instance 'type-specifier-form
@@ -529,7 +576,8 @@
                     (list parsed-initform))
                 ,.new-slot-keys)
               env)))|#
-      (values (if slot-initform-supplied
+      (values (if slot-initform
+		  ;; slot-initform-supplied
                   (apply #'make-struct-slot-form
                          slot-name
                          parsed-initform
@@ -634,10 +682,12 @@
            )
 
       (declare (type symbol
-                     default-conc-name
                      default-constructor-name
                      default-copier-name
                      default-predicate-name
+                     )
+               (type (or character string symbol)
+                     default-conc-name
                      conc-name)
                )
 
@@ -787,12 +837,5 @@
               )))
         ))
     ))
-
-
-(defmethod clast-element-subforms ((df defstruct-form))
-  (list* (defstruct-form-name df)
-         (defstruct-form-options df)
-         (defstruct-form-slots df)))
-
 
 ;;;; end of file -- parse-defstruct.lisp

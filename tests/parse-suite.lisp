@@ -58,24 +58,27 @@
 
 
 (test lambda-application
+
   ;; GIVEN: a lambda application form
   (let* ((input '((lambda (x) x) 9))
+         
 	 ;; WHEN: the form is parsed
 	 (output 
 	  (clast:parse input))
 	 (operator
-	  (clast::form-operator output))
+          (clast::form-operator output))
 	 (args
 	  (clast::form-args output))
 	 (arg
-	  (first args)))
+	  (first args))
+         )
     ;; THEN: an element of the correct type is returned
-    (is (eql 'clast::lambda-application (type-of output)))
+    (is (typep output 'clast::lambda-application))
     ;; ... the list of arguments that are getting applied and the
     ;; lambda function are correctly recorded
-    (is (eql 1 (length args)))
-    (is (eql 'clast::constant-form (type-of arg)))
-    (is (eql 'clast::lambda-form (type-of operator)))
+    (is (= 1 (length args)))
+    (is (typep arg 'clast::constant-form))
+    (is (typep operator 'clast::lambda-form))
     ))
 
 
@@ -84,7 +87,9 @@
 (test block-form
   ;; GIVEN: a block form
   (let* ((input
-	  '(block name (+ 1 1)))
+	  '(block name (+ 1 one))) ; Ensure SBCL does not see this
+                                   ; form as 'constant'.
+
 	 ;; WHEN: when the form is parsed 
 	 (output
 	  (clast:parse input))
@@ -107,6 +112,7 @@
   ;; GIVEN: a block form that contains a RETURN-FROM invocation
   (let* ((input
 	  '(block stop (return-from stop 9)))
+
 	 ;; WHEN: the form is parsed
 	 (output
 	  (clast:parse input))
@@ -125,6 +131,7 @@
 	 ;; (return-from-enclosing-block
 	 ;;  (clast::form-enclosing-block return-from-form))
 	 )
+
     ;; THEN: the parsing reaches the return form and an element of the
     ;; appropriate type is returned
     (is (eql 'clast::return-from-form (type-of return-from-form)))
@@ -225,7 +232,8 @@
 
   ;; GIVEN: a declaim form with two declarations
 
-  (let ((input '(declaim (special first) (special second))))
+  (let ((input '(declaim (special one) (special two))))
+    ;; Make sur eto avoid SBCL package locks.
 
     ;; WHEN: the form is parsed
 
@@ -235,9 +243,9 @@
       ;; THEN: the returned environment records information regarding
       ;; both declarations
       (is (eq :special
-              (clast:variable-information 'first environment)))
+              (clast:variable-information 'one environment)))
       (is (eq :special
-              (clast:variable-information 'second environment)))
+              (clast:variable-information 'two environment)))
       (let* ((declarations
 	      (clast::declaration-form-declarations element))
 	     (declaration
@@ -248,9 +256,12 @@
 	     ;; FIXME: The resulting environment slot is never
 	     ;; initialized nor considered during parsing. This causes
 	     ;; this test failure.
+             ;;
+             ;; It should be intialized to the "global extension  environment". 
 
 	     (resulting-environment
-	      (clast::declaration-form-resulting-environment element)))
+	      (clast::declaration-form-resulting-environment element))
+             )
 
 	;; ... both declarations are associated to the element
 	(is (= 2 (length declarations)))
@@ -261,9 +272,9 @@
 	;; ... and the resulting environment associate with the
 	;; returned element is correctly augmented
 	(is (eq :special
-                (clast:variable-information 'first resulting-environment)))
+                (clast:variable-information 'one resulting-environment)))
 	(is (eq :special
-                (clast:variable-information 'second resulting-environment)))
+                (clast:variable-information 'two resulting-environment)))
 	))))
 
 
@@ -301,6 +312,7 @@
 	    (body-env
 	     (clast::form-body-env element))
             )
+        (declare (ignorable binds))
 
 ;;;         (format t "~&>>> ~S~%>>> E: ~S~%>>> G: ~S~%"
 ;;;                 body-env
@@ -324,21 +336,35 @@
 ;; recorded by the library fttb the test is the exact same.
 
 (test labels
+  ;; GIVEN: a labels form that declares a local function and that, in
+  ;; its body declares a top level function
   (let ((input
 	 '(labels ((local-id (x) x))
 	   (local-id 9)
-	   (defun id (x) x))))
+	   (defun id (x) x)))
+        )
+
+    ;; WHEN: the form is parsed...
+
     (multiple-value-bind (element environment)
 	(clast:parse input)
-      (is (eql 'clast::labels-form (type-of element)))
+
+      ;; THEN: an element of the appropriate type should be returned...
+
+      (is (typep element 'clast::labels-form))
+
       ;; ... the functions that were defined locally should not be in the
       ;; return environment (FIXME)
+
       (is (eq nil (clast:function-information 'local-id environment)))
       (is (eq :function (clast:function-information 'id environment)))
       (let ((binds (clast::form-binds element))
 	    (body (clast::form-body element))
-	    (body-env (clast::form-body-env element)))
-	(is (eql 2 (length body)))
+	    (body-env (clast::form-body-env element))
+            )
+        (declare (ignorable binds))
+
+	(is (= 2 (length body)))
 	(is (eql :function (clast:function-information 'local-id body-env)))
 	))))
 
@@ -356,8 +382,12 @@
 
 (test if
   ;; GIVEN: an if form with two branches
+
   (let* ((input
-	  '(if t 1 2))
+	  '(if t forty-two 1)) ; Avoid SBCL "constantp-ness". Note
+                               ; that the form has to be like that,
+                               ; with a free variable.
+
 	 ;; WHEN: the form is parsed
 	 (output
 	  (clast:parse input))
@@ -366,14 +396,16 @@
 	 (then
 	  (clast::form-then output))
 	 (else
-	  (clast::form-else output)))
+	  (clast::form-else output))
+         )
+
     ;; THEN: an element of the appropriate type is returned
-    (is (eql 'clast::if-form (type-of output)))
+    (is (typep output 'clast:if-form))
     ;; ... and the if condition form is recorded correctly
-    (is (eql 'clast::constant-ref (type-of condition)))
+    (is (typep condition 'clast:constant-ref))
     ;; ... as both branches
-    (is (eql 'clast::constant-form (type-of then)))
-    (is (eql 'clast::constant-form (type-of else)))
+    (is (typep then 'clast:free-variable-ref))
+    (is (typep else 'clast:constant-form))
     ))
 
 
@@ -394,13 +426,15 @@
 	 (clause-body
 	  (clast::form-body clause))
 	 (clause-selector
-	  (clast::form-selector clause)))
+	  (clast::form-selector clause))
+         )
+
     ;; THEN: an element of the appropriate type is returned
-    (is (eql 'clast:cond-form (type-of output)))
+    (is (typep output 'clast:cond-form))
     ;; ... and both clauses are recorded
-    (is (eql 2 (length clause-body)))
+    (is (= 2 (length clause-body)))
     ;; ... with their selectors
-    (is (eql 'clast::constant-ref (type-of clause-selector)))
+    (is (typep clause-selector 'clast::constant-ref))
     ))
 
 
@@ -414,13 +448,14 @@
 	 (selection
 	  (clast::selector-form-selection output))
 	 (clauses
-	  (clast::form-clauses output)))
+	  (clast::form-clauses output))
+         )
     ;; THEN: an element of the appropriate type is returned
-    (is (eql 'clast::case-form (type-of output)))
+    (is (typep output 'clast::case-form))
     ;;; ... the selection is recorded correctly
-    (is (eql 'clast:constant-form (type-of selection)))
+    (is (typep selection 'clast:constant-form))
     ;; ... as all clauses
-    (is (eql 3 (length clauses)))
+    (is (= 3 (length clauses)))
     ))
 
 
@@ -448,7 +483,8 @@
 	    (body
 	     (clast::form-body element))
 	    (body-env
-	     (clast::form-body-env element)))
+	     (clast::form-body-env element))
+            )
 	;; ... both local variables are recorded as its body forms
 	(is (= 2 (length binds))) 
 	(is (= 3 (length body)))
@@ -466,17 +502,25 @@
 (test macrolet
   ;; GIVEN: a macrolet form that defines a local id macro that gets
   ;; executed in its body.
-  (let ((input '(macrolet ((id (x) x))
+
+  (let ((input '(macrolet ((id (x) `(+ *foo* ,x))) ; Fool SBCL "constantp".
 		 (id 9))))
-    ;; WHEN: the form is parsed
+
+    ;; WHEN: the form is parsed.
     (multiple-value-bind (element environment)
 	(clast:parse input)
       ;; THEN: an element of the appropriate type is returned and the
-      (is (eql 'clast::macrolet-form (type-of element)))
+      ;; returned enviroment contains the function definition
+
+      (declare (ignore environment))
+
+      (is (typep element 'clast::macrolet-form))
+
       ;; TODO: Update this test once the parsing of progn forms is
       ;; corrected across all different parsing function in order to
-      ;; support nested environment additions. Here you should check
-      ;; for handling of those additions.
+      ;; support nested environment additions. Here I should check
+      ;; to handle those additions.
+
       (let* ((binds
 	      (clast::form-binds element))
 	     (bind
@@ -484,14 +528,15 @@
 	     (body
 	      (clast::form-body element))
 	     (body-env
-	      (clast::form-body-env element)))
-	;; ... the form bindings are correctly recorded as its body
+	      (clast::form-body-env element))
+             )
+    	;; ... the form bindings are correctly recorded as its body
 	;; forms
-	(is (eql 'clast:macro-definition-form (type-of bind)))
-	(is (eql 'clast:macro-application (type-of (first body))))
+	(is (typep bind 'clast:macro-definition-form))
+	(is (typep (first body) 'clast:macro-application))
 	;; ... and the body environment is correctly augmented
 	(is (eql :macro (clast:function-information 'id body-env)))
-	;; ... add check for potential nested definitions here
+	;; ... add check for potential nested definitions here.
 	))))
 
 

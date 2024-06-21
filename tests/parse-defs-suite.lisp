@@ -107,9 +107,9 @@
   ;; GIVEN: a function with a type declarations.
 
   (let* ((input
-	  '(defun fixnum-id (id)
-	    (declare (type fixnum x))
-	    x))
+	  '(defun fixnum-id (x)
+             (declare (type fixnum x))
+             x))
 	 ;; WHEN: the function is parsed
 	 (output
 	  (clast:parse input))

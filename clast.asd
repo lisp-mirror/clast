@@ -25,6 +25,18 @@ form."
                (:file "clast-loop-elements"
                 :depends-on ("clast-elements"))
 
+               (:file "clast-bq-elements"
+                :depends-on ("clast-elements"))
+
+               (:file "clast-parse-protocol"
+                :depends-on ("clast-package"))
+
+               (:file "clast-printing"
+                :depends-on ("clast-defstruct-elements"
+                             "clast-defclass-elements"
+                             "clast-loop-elements"
+                             ))
+
                (:module "utilities"
                 :components ((:file "lambda-list-parsing")
                              (:file "kitchen-sink"))
@@ -39,6 +51,7 @@ form."
                              "clast-defstruct-elements"
                              "clast-loop-elements"
                              "clast-printing"
+                             "clast-parse-protocol"
                              "env")
                 :components (
                              #+ccl
@@ -71,7 +84,10 @@ form."
                 :depends-on ("clast-elements" "env" "utilities"))
 
                (:file "parse"
-                :depends-on ("parse-lambda-lists"))
+                :depends-on ("clast-parse-protocol" "parse-lambda-lists"))
+
+               (:file "parse-constants"
+                :depends-on ("parse"))
 
                (:file "parse-defs"
                 :depends-on ("parse"))
@@ -84,12 +100,6 @@ form."
 
                (:file "parse-loop"
                 :depends-on ("clast-loop-elements" "parse"))
-               
-               (:file "clast-printing"
-                :depends-on ("clast-defstruct-elements"
-                             "clast-defclass-elements"
-                             "clast-loop-elements"
-                             ))
 
                (:file "walk"
                 :depends-on ("parse" "parse-loop"))
@@ -104,7 +114,7 @@ form."
     :license "BSD"
     :description "Tests for the CLAST library"
     :pathname "tests/"
-    :depends-on (:clast :fiveam)
+    :depends-on (:clast #-5am :fiveam)
     :components ((:file "clast-tests-package")
 
 		 (:file "suites"
