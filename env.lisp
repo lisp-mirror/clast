@@ -70,11 +70,17 @@ Hyperspec 3.1.1.1")
 ;;;;
 ;;;; 2024-06-11 MA:
 ;;;; Decision taken: renamed ENV-WRAPPER to ENVIRONMENT.
+;;;;
+;;;; 2024-06-23 MA:
+;;;; Maybe make this an "abstract" structure (with no constructor).
 
 (defstruct (environment (:constructor %make-environment
-                         (&optional environment
-                                    (global-extensions environment)))
+                         (&optional env
+                                    (global-extensions env)))
                         )
+  "The CLAST Environment Structure.
+
+A wrapper around the underlying enviroment dta structures."
   (env nil) ; The &environment CL environment.
   (global-extensions nil)
   )
@@ -124,7 +130,7 @@ as per the Hyperspec."))
 
 
 ;;;; ensure-parsing-environment --
-;;;; This is the only kruftiness in the environment handling API, in
+;;;; This is one kruftiness in the environment handling API, in
 ;;;; the sense that is is a function that *must* get redefined by the build
 ;;;; process when starting from scratch.
 
