@@ -116,7 +116,9 @@
                          info
                          local-or-global-p)
        ,env-function-form
-     (values binding-type
+     (values (if (eq binding-type :special-operator)
+                 :special-form
+                 binding-type)
              local-or-global-p
              info
              locative-cons ; This will never be used in portable code,
@@ -189,7 +191,11 @@
                              (env *allegro-portable-parsing-env*))
   (declare (type symbol f))
   (env-item-info #'(lambda (f e)
-                     (sys:function-information f e t t))
+                     (sys:function-information f e t)
+                     ;; Do not add T as last arg, otherwise Allegro returns a
+                     ;; :special-operator result for macros implementing... special
+                     ;; operators.
+                     )
                  f
                  env)
   )
