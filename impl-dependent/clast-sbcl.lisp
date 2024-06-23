@@ -37,7 +37,7 @@
 
 (defmethod print-object ((pe parsing-environment) stream)
   (print-unreadable-object (pe stream :identity t)
-    (write-string "CLAST Parsing Environment" stream)))
+    (write-string "CLAST SBCL Parsing Environment" stream)))
 
 
 (defmethod is-environment ((e parsing-environment)) t)
