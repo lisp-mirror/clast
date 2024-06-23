@@ -22,7 +22,7 @@
                        &key
                        ;; enclosing-form
                        ;; macroexpand
-                       ;; environment
+                       ;; (environment *cl-global-env*)
                        &allow-other-keys)
   "The main entry method for the parsing of LOOP forms."
   (if (is-loop-keyword (second form)) ; Should be enough...
@@ -36,7 +36,7 @@
                           &key
                           enclosing-form
                           macroexpand
-                          environment
+                          (environment *cl-global-env*)
                           &allow-other-keys)
   (declare (ignore macroexpand))
   (values
@@ -56,7 +56,7 @@
                             &key
                             enclosing-form
                             macroexpand
-                            environment
+                            (environment *cl-global-env*)
                             &allow-other-keys
                             )
   (declare (ignore enclosing-form macroexpand))
@@ -237,7 +237,7 @@ new-env             : a possibly augmented env.
                               &key
                               enclosing-form
                               macroexpand
-                              environment
+                              (environment env)
                               &allow-other-keys)
   (declare (ignorable clauses env) ; Allegro 11.x whines otherwise.
            (ignore macroexpand keys))
@@ -265,7 +265,7 @@ new-env             : a possibly augmented env.
                               &key
                               enclosing-form
                               macroexpand
-                              environment
+                              (environment env)
                               &allow-other-keys)
   (declare (ignore enclosing-form environment macroexpand))
   (parse-loop-compound-forms-clause loop-kwd form clauses env keys))
@@ -279,7 +279,7 @@ new-env             : a possibly augmented env.
                               &key
                               enclosing-form
                               macroexpand
-                              environment
+                              (environment env)
                               &allow-other-keys)
   (declare (ignore enclosing-form environment macroexpand))
   (parse-loop-compound-forms-clause loop-kwd form clauses env keys))
@@ -306,7 +306,7 @@ new-env             : a possibly augmented env.
                               &key
                               enclosing-form
                               macroexpand
-                              environment
+                              (environment env)
                               &allow-other-keys)
   (declare (ignorable clauses) ; Allegro 11.x whines about this.
            (ignore enclosing-form macroexpand environment))
@@ -381,6 +381,7 @@ new-env             : a possibly augmented env.
                               env
                               &rest keys
                               &key
+                              ;; (environment env)
                               &allow-other-keys)
   (apply #'parse-loop-clause :for form clauses env keys))
 
@@ -393,7 +394,7 @@ new-env             : a possibly augmented env.
                               &key
                               enclosing-form
                               macroexpand
-                              environment
+                              (environment env)
                               &allow-other-keys
                               &aux
                               (rest-form form)
@@ -893,6 +894,7 @@ new-env             : a possibly augmented env.
                               env
                               &rest keys
                               &key
+                              ;; (environment env)
                               &allow-other-keys
                               )
   (parse-loop-compound-forms-clause loop-kwd form clauses env keys)
@@ -905,6 +907,7 @@ new-env             : a possibly augmented env.
                               env
                               &rest keys
                               &key
+                              ;; (environment env)
                               &allow-other-keys
                               )
   (parse-loop-compound-forms-clause loop-kwd form clauses env keys)
@@ -919,7 +922,7 @@ new-env             : a possibly augmented env.
                               &key
                               enclosing-form
                               macroexpand
-                              environment
+                              (environment env)
                               &allow-other-keys
                               )
   (declare (ignore enclosing-form macroexpand environment))

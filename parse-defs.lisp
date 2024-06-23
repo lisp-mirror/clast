@@ -22,7 +22,7 @@
                        &key
                        enclosing-form ; An EVAL-WHEN or some LET.
                        macroexpand
-                       environment
+                       (environment *cl-global-env*)
                        &allow-other-keys)
   "Parsing of DEFVAR forms.
 
@@ -58,7 +58,7 @@ The return values include the augmented environment.
                        &key
                        enclosing-form ; An EVAL-WHEN or some LET.
                        macroexpand
-                       environment
+                       (environment *cl-global-env*)
                        &allow-other-keys)
   "Parsing of DEFPARAMETER forms.
 
@@ -94,7 +94,7 @@ The return values include the augmented environment.
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -135,7 +135,7 @@ The return values include the augmented environment.
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -178,7 +178,7 @@ The return values include the augmented environment.
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (destructuring-bind (defgeneric-kwd gf-name ll &body opts-and-meths)
@@ -228,7 +228,7 @@ The return values include the augmented environment.
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -281,7 +281,7 @@ The return values include the augmented environment.
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -327,7 +327,7 @@ The return values include the augmented environment.
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand keys))
