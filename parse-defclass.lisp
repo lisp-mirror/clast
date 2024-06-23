@@ -418,7 +418,7 @@ which 'accumulates' the effects of parsing.")
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
 
