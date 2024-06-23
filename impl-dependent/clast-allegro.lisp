@@ -36,7 +36,7 @@
 
 (defmethod print-object ((pe parsing-environment) stream)
   (print-unreadable-object (pe stream :identity t)
-    (write-string "CLAST LW Parsing Environment" stream)))
+    (write-string "CLAST Allegro Parsing Environment" stream)))
 
 
 (defmethod is-environment ((e parsing-environment)) t)
@@ -49,7 +49,8 @@
 (defmethod make-env ((env-type (eql 'parsing-environment))
                      (env null)
                      &key
-                     (global-extensions nil)
+                     (global-extensions
+                      (sys:ensure-portable-walking-environment env))
                      &allow-other-keys)
   (%make-parsing-environment 
    (sys:ensure-portable-walking-environment env)
@@ -74,7 +75,8 @@
 (defmethod make-env ((env-type (eql 'parsing-environment))
                      (env sys::augmentable-environment)
                      &key
-                     (global-extensions nil)
+                     (global-extensions
+                      (sys:ensure-portable-walking-environment env))
                      &allow-other-keys)
   (%make-parsing-environment env global-extensions))
 
@@ -86,14 +88,20 @@
 
 
 (defun get-implementation-env (env) ; This is needed for the internal API.
-  (declare (type (or null
+  (declare (type (or ; null ; In Allegro this should never be NIL.
                      sys::augmentable-environment
                      parsing-environment
                      )))
   (etypecase env
-    (null env)
+    ;; (null env)
     (sys::augmentable-environment env)
     (parsing-environment (implementation-env env))))
+
+
+(eval-when (:load-toplevel :execute)
+  (setq *cl-global-env* (ensure-parsing-environment nil))
+  ;; This will work if above definitions are not changed.
+  )
 
 
 ;;;; The Magnificent (yet neglected) 7.
@@ -117,12 +125,17 @@
      ))
 
 
-;;;; Morevoer, ACL needs a workaround to handle a "portable walking
-;;;; environment.
+;;; *allegro-portable-parsing-env*
+;;; Morevoer, ACL needs a workaround to handle a "portable walking
+;;; environment.
+;;;
+;;; Maybe just remove this and use *CL-GLOBAL-ENV*, which should be
+;;; just fine (and tidier).
 
 (defvar *allegro-portable-parsing-env*
   ;; (sys:ensure-portable-walking-environment nil)
-  (ensure-parsing-environment))
+  (or *cl-global-env* (ensure-parsing-environment nil))
+  )
 
 
 ;;; env-item-info --
@@ -175,7 +188,7 @@
                              &optional
                              (env *allegro-portable-parsing-env*))
   (declare (type symbol f))
-  (env-type-info #'(lambda (f e)
+  (env-item-info #'(lambda (f e)
                      (sys:function-information f e t t))
                  f
                  env)
@@ -189,7 +202,7 @@
                                 (env *allegro-portable-parsing-env*))
   (declare (type symbol decl-name))
 
-  (env-type-info #'(lambda (d e)
+  (env-item-info #'(lambda (d e)
                      (sys:function-information d e t t))
                  decl-name
                  env)
@@ -203,44 +216,18 @@
                         (env *allegro-portable-parsing-env*))
   (declare (type symbol tag-name))
 
-  (typecase env
-    (parsing-environment
-     (multiple-value-bind (tag-kwd locative decl)
-         (sys:tag-information tag-name
-                              (parsing-environment-env env))
-       (values tag-kwd decl locative)))
-
-    (sys::augmentable-environment
-     (multiple-value-bind (tag-kwd locative decl)
-         (sys:tag-information tag-name env)
-       (values tag-kwd decl locative)))
-
-    (t (values nil nil nil)))
+  (env-item-info #'sys:tag-information tag-name env)
   )
+
 
 ;;; block-information
 
 (defun block-information (block-name
                           &optional
                           (env *allegro-portable-parsing-env*))
-  (typecase env
-    (parsing-environment
-     (multiple-value-bind (block-kwd locative decl)
-         (sys:block-information block-name
-                                (parsing-environment-env env))
-       (values block-kwd decl locative)))
+  (declare (type symbol block-name))
 
-    (sys::augmentable-environment
-     (multiple-value-bind (block-kwd locative decl)
-         (sys:block-information block-name env)
-       (values block-kwd decl locative)))
-
-    (t (values nil nil nil)))
-
-
-  (multiple-value-bind (block-kwd locative decl)
-      (sys:block-information block-name env)
-    (values block-kwd decl locative))
+  (env-item-info #'sys:block-information block-name env)
   )
 
 
@@ -339,7 +326,7 @@ of tags and blocks."
 
       (let* ((new-lw-env
               (etypecase env
-                ((or null sys::augmented-environment)
+                ((or null sys::augmentable-environment)
                  (apply #'sys:augment-environment
                         env
                         :allow-other-keys t
@@ -380,7 +367,9 @@ of tags and blocks."
            (type list variable symbol-macro function macro declare))
 
   (etypecase env
-    ((or null sys::augmentable-environment)
+    (
+     ;; (or null sys::augmentable-environment)
+     sys::augmentable-environment ; The ENV should never be NIL in Allegro.
 
      ;; We just produce a parsing environment with a global extension.
 
@@ -428,7 +417,9 @@ APIs/macros easing this sort of 'stack-faking'.
 This is a destructive function."
 
   ;; Being paranoid.
-  (check-type global-env (or null sys::augmentable-environment))
+  (check-type global-env
+      (or ; null ; No NULL environments in Allegro.
+       sys::augmentable-environment))
 
   (etypecase env
     (null
@@ -461,7 +452,9 @@ This is a destructive function."
                          &optional
                          (env *allegro-portable-parsing-env*))
   ;; (error "No implementation for CLtL2 PARSE-MACRO in Allegro CL.")
-  (excl::defmacro-expander (list* name lambda-list body) env)
+
+  (excl::defmacro-expander (list* name lambda-list body)
+      (get-implementation-env env))
   )
 
 
@@ -469,7 +462,10 @@ This is a destructive function."
                 &optional
                 (env *allegro-portable-parsing-env*))
   ;; (error "No implementation for CLtL2 ENCLOSE in Allegro CL.")
-  (excl::make-lexical-closure lambda-expression nil env)
+
+  (excl::make-lexical-closure lambda-expression
+    nil
+    (get-implementation-env env))
   )
 
 

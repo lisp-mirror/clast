@@ -263,7 +263,8 @@ See Also:
 (defun build-constant-reference (v kind local-p decls
                                    &optional
                                    enclosing-form
-                                   environment)
+                                   (environment *cl-global-env*)
+                                  )
   (declare (type symbol v)
            (type boolean local-p)
            ;; (type (member :constant) kind)
@@ -291,7 +292,7 @@ See Also:
 (defmethod parse ((s symbol)
                   &rest keys
                   &key
-                  environment
+                  (environment *cl-global-env*)
                   macroexpand
                   enclosing-form
                   is-bare-name
@@ -368,7 +369,7 @@ See Also:
 (defmethod parse ((form cons)
                   &rest keys
                   &key
-                  environment
+                  (environment *cl-global-env*)
                   enclosing-form
                   &allow-other-keys)
   (if (and (constantp form
@@ -414,7 +415,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (let ((args (arguments form)))
@@ -487,7 +488,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   ;; This is tricky.  I "should" be able to "just parse" the list of
@@ -520,7 +521,7 @@ See Also:
 (defun parse-args (args &rest keys
                         &key
                         enclosing-form
-                        environment
+                        (environment *cl-global-env*)
                         macroexpand
                         &allow-other-keys)
   (declare (ignore enclosing-form environment macroexpand))
@@ -530,7 +531,7 @@ See Also:
 (defun parse-binding-seq (bindings
                           &rest keys
                           &key
-                          environment
+                          (environment *cl-global-env*)
                           enclosing-form
                           macroexpand
                           &allow-other-keys)
@@ -557,7 +558,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore environment macroexpand))
@@ -594,7 +595,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -618,7 +619,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -641,7 +642,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -667,7 +668,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
 
@@ -689,7 +690,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   ;; This is a complicated one as it must be able to change the
@@ -716,7 +717,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -743,7 +744,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -768,7 +769,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -814,7 +815,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -851,7 +852,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -878,7 +879,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
 
@@ -980,7 +981,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1029,7 +1030,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1068,7 +1069,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1088,7 +1089,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore enclosing-form environment macroexpand))
@@ -1100,7 +1101,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1117,7 +1118,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1135,7 +1136,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1215,7 +1216,7 @@ See Also:
                         &rest keys
                         &key
                         enclosing-form
-                        environment
+                        (environment *cl-global-env*)
                         macroexpand
                         &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1247,7 +1248,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1282,7 +1283,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1308,7 +1309,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
 
@@ -1358,7 +1359,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1391,7 +1392,7 @@ See Also:
                        &rest keys
                        &key
                        ;; enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        ;; macroexpand
                        &allow-other-keys)
   (declare (ignore keys))
@@ -1404,7 +1405,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1422,7 +1423,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        ;; macroexpand
                        &allow-other-keys)
   ;; Incomplete and incorrect FTTB.
@@ -1445,7 +1446,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        ;; macroexpand
                        &allow-other-keys)
   ;; Incomplete and incorrect FTTB.
@@ -1479,7 +1480,7 @@ See Also:
                                    &rest keys
                                    &key
                                    enclosing-form
-                                   environment
+                                   (environment *cl-global-env*)
                                    macroexpand
                                    &allow-other-keys)
   (declare (ignore dovar-kwd))
@@ -1518,7 +1519,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore enclosing-form environment macroexpand))
@@ -1530,7 +1531,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore enclosing-form environment macroexpand))
@@ -1542,7 +1543,7 @@ See Also:
                        &rest keys
                        &key
                        enclosing-form
-                       environment
+                       (environment *cl-global-env*)
                        macroexpand
                        &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1595,7 +1596,7 @@ See Also:
 (defun parse-lambda-form (lf &rest keys
                              &key
                              enclosing-form
-                             environment
+                             (environment *cl-global-env*)
                              macroexpand
                              &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1619,7 +1620,7 @@ See Also:
 (defun parse-local-function (f &rest keys
                                &key
                                enclosing-form
-                               environment
+                               (environment *cl-global-env*)
                                macroexpand
                                &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1646,7 +1647,7 @@ See Also:
 (defun parse-local-macro (m &rest keys
                             &key
                             enclosing-form
-                            environment
+                            (environment *cl-global-env*)
                             macroexpand
                             &allow-other-keys)
   (declare (ignore macroexpand))
@@ -1674,7 +1675,7 @@ See Also:
                                declaration
                                &rest keys
                                &key
-                               environment
+                               (environment *cl-global-env*)
                                enclosing-form
                                macroexpand)
   )
@@ -1705,7 +1706,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
 
@@ -1726,7 +1727,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1757,7 +1758,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1788,7 +1789,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1813,7 +1814,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1838,7 +1839,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1863,7 +1864,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1888,7 +1889,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1913,7 +1914,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1937,7 +1938,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
@@ -1961,7 +1962,7 @@ See Also:
                               d
                               &rest keys
                               &key
-                              environment
+                              (environment *cl-global-env*)
                               enclosing-form
                               macroexpand)
   (declare (ignore keys macroexpand))
