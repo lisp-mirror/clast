@@ -372,13 +372,18 @@ See Also:
                   (environment *cl-global-env*)
                   enclosing-form
                   &allow-other-keys)
-  (if (and (constantp form
-                      (if (typep environment 'environment)
-                          (environment-env environment)
-                          environment)) ; This is VERY iffy. CONSTANTP
-                                        ; is inherently implementation
-                                        ; depedent.
-           (not (is-quoted-form form)))
+  (if (and (ignore-errors
+            (constantp form
+                       (if (typep environment 'environment)
+                           (environment-env environment)
+                           environment)) ; This is VERY iffy. CONSTANTP
+                                         ; is inherently implementation
+                                         ; dependent.
+            )
+           ;; The IGNORE-ERRORS may be too strict, but is works around
+           ;; (yet) another Allegro indiosyncracy.
+           (not (is-quoted-form form))
+           )
       (values (make-instance 'constant-form ;
                              :type (type-of form)
                              :source form
@@ -475,7 +480,7 @@ See Also:
                                             nil)))
             )
 
-           (:special-form
+           ((:special-form :special-operator) ; Allegro, again messes things up.
             (error 'unknown-special-operator-error :name op))
            )
 
@@ -1675,7 +1680,7 @@ See Also:
                                declaration
                                &rest keys
                                &key
-                               (environment *cl-global-env*)
+                               environment
                                enclosing-form
                                macroexpand)
   )
