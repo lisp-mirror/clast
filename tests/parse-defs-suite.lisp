@@ -199,12 +199,18 @@
 	))))
 
 
+;;; test define-compile-macro-form
+;;; The name of the macro is 'idx' to accommodate Allegro, which
+;;; does change the global env from test to test.
+;;; What I should do is to ensure that each test is run in a proper,
+;;; pristine env.
+
 (test define-compile-macro-form
 
   ;; GIVEN: a compiler macro that does nothing.
 
   (let ((input
-	 '(define-compiler-macro id (x) x)))
+	 '(define-compiler-macro idx (x) x)))
 
     ;; WHEN: the macro is parsed.
 
@@ -214,10 +220,11 @@
       ;; THEN: parsing returns a CLAST-ELEMENT instance of the
       ;; appropriate type ...
 
+
       (is (typep element 'clast::define-compiler-macro-form))
 
       ;; ... the environment is correctly augmented...
-      (is (eq :macro (clast:function-information 'id env)))
+      (is (eq :macro (clast:function-information 'idx env)))
 
       (let ((name
 	     (clast::define-compiler-macro-form-name element))
@@ -229,12 +236,12 @@
 	     (clast::form-progn element)))
 
 	;; ... the macro name is correctly noted
-	(is (eq 'id name))
+	(is (eq 'idx name))
 	;; ... as the lambda list ...
 	(is (typep lambda-list 'clast::macro-lambda-list))
 	;; ... its body environment
 	(is (eq :lexical (clast:variable-information 'x body-env)))
-	(is (eq :macro (clast:function-information 'id body-env)))
+	(is (eq :macro (clast:function-information 'idx body-env)))
 	;; ... and subforms
 	(is (typep progn-forms 'clast::block-form))
 	))))

@@ -4,6 +4,13 @@
 
 ;;;; See file COPYING in main folder for licensing and copyright information.
 
+;;;; Notes:
+;;;;
+;;;; 2024-06-23 MA
+;;;; Allegro modifies *CL-GLOBAL-ENV*, therefore, to ensure that the tests
+;;;; work as advertised, it is necessary to either ensure different naming in
+;;;; different tests, or fresh environments in different tests.
+
 (in-package :clast-tests)
 
 (in-suite :parse-defstruct)
@@ -148,7 +155,8 @@
     (multiple-value-bind (element environment)
 
 	;; WHEN: the struct definition is parsed
-	(clast:parse input)
+	(clast:parse input
+                     :environment (clast::ensure-parsing-environment nil))
 
       ;; THEN: a constructor with the specified name and arguments is
       ;; add to the environment
@@ -172,7 +180,8 @@
     ;; WHEN: the struct definition is parsed
 
     (multiple-value-bind (element environment)
-	(clast:parse input)
+	(clast:parse input
+                     :environment (clast::ensure-parsing-environment nil))
 
       ;; THEN: a constructor with the specified name and arguments is
       ;; add to the environment
@@ -196,7 +205,8 @@
     (multiple-value-bind (element environment)
 
 	;; WHEN: the struct definition is parsed
-	(clast:parse input)
+	(clast:parse input
+                     :environment (clast::ensure-parsing-environment nil))
 
       ;; THEN: no constructor for the struct is added to the
       ;; environment
