@@ -5,13 +5,21 @@ Copyright (c) 2014-2020 Marco Antoniotti and Matteo Crespi, all rights reserved.
 Copyright (c) 2020-2024 Marco Antoniotti, all rights reserved.
 
 **CLAST** is a Common Lisp library that can produce an *abstract
-syntax tree* of a *form*.  Its main use is for source analysis and
-transformation, e.g., extracting the *free variables* list from a
-form.
+syntax tree* of a *form*.  Its main use is for *source code analysis*
+and *transformation*, e.g., extracting the *free variables* list from
+a form.
 
 The library relies on a working implementation of the "*environment*"
 functions from **CLtL1**, so, at this point, it does not work on every
-available implementation.
+available implementation.  Currently, **CLAST** works on:
+
+- [Lispworks](https://www.lispworks.com) at least 8.x.
+- [SBCL](https://www.sbcl.org) at least 2.2.9.
+- [Allegro](https://www.franz.com) at least 11.x.
+
+Other implementations are in the works:
+[CMUCL](https://cmucl.cons.org) and [Clozure
+CL](https://www.clozure.com) will be ready soon.
 
 See the file `COPYING` for licensing information
 
@@ -27,7 +35,39 @@ the `.system` file; your choice) and proceed from there.
 ### Dependencies
 
 **CLAST** depends only on `fiveam` for testing.  If you will not use
-the test system to run the tests, you will not need `fiveam`.
+the test system to run the tests, you will not need `fiveam`.  I
+suggest you `load` (or `quickload`) `fiveam` **before** loading the
+**CLAST** system file, to minimize interaction with the building
+process.
+
+
+Testing
+-------
+
+You can run the tests using `fiveam`.  The top level suite is called
+`:parse`.
+
+At the time of this writing there are two expected failures in the
+test suite.  Also, `sbcl` and `allegro` produce several warning about
+declarations that **CLAST** generates for `defstruct` and `defclass`
+*automatic* functions.  You can ignore them, but a fix would be most
+than welcome.
+
+
+Documentation
+-------------
+
+The documentation is produced with
+[`HEΛP`](https://helambdap.sf.net).  It is accessible from the
+[CLAST main site](https://clast.sf.net).
+
+
+Help Needed
+-----------
+
+Please help extending and fixing this library.  You know the drill.
+Porting to [ECL](https://ecls) and [CLISP](https://clisp) should be
+doable.  Porting to [ABCL](https://abcl) needs... some more work.
 
 
 A NOTE ON FORKING

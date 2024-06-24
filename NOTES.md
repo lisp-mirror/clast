@@ -67,3 +67,10 @@ environments in place.
 As expected and feared, SCBL complains.  But it does have a point and
 I should really refactor the code in order to have **all** the
 implementation dependent code loaded before the top level one.
+
+
+2024-06-24 Refactoring done and Allegro working.
+------------------------------------------------
+
+Refactoring of code mostly done (it could be improved) and Allegro
+(Express 11.x) is working.
