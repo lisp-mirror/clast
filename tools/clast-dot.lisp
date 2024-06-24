@@ -8,7 +8,11 @@
 
 (in-package "CLAST")
 
-;(require :cl-dot)
+(require :cl-dot)
+
+
+;;; I assume a UN*X machine with `dot` and `neato` installed in the
+;;; usual places.
 
 (eval-when (:load-toplevel :execute)
   (setf cl-dot:*dot-path* "/opt/local/bin/dot"
