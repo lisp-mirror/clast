@@ -14,7 +14,7 @@
 
 ;;; Building the CLAST documentation (assume to be running on LW).
 
-(hlp:document "../"
+(hlp:document #P"./"
 	      :documentation-title "CLAST"
               :exclude-directories
               (list "tools/"
@@ -26,16 +26,16 @@
                     "_clastbin/"
                     )
 
-	      :exclude-files
-              (list ".gitignore"
-                    ;; "impl-dependent/clast-allegro.lisp"
-                    "impl-dependent/clast-capi-tree.lisp"
-                    ;; "impl-dependent/clast-clozure.lisp"
-                    ;; "impl-dependent/clast-cmucl.lisp"
-                    "impl-dependent/clast-lispworks.lisp"
-                    ;; "impl-dependent/clast-sbcl.lisp"
-                    ;; "impl-dependent/clast-missing-clt2-envs.lisp"
+	      :exclude-files ; I run this from LW.
+              (list "impl-dependent/clast-allegro.lisp"
+                    ;; "impl-dependent/clast-capi-tree.lisp"
+                    "impl-dependent/clast-clozure-cl.lisp"
+                    "impl-dependent/clast-cmucl.lisp"
+                    ;; "impl-dependent/clast-lispworks.lisp"
+                    "impl-dependent/clast-sbcl.lisp"
+                    "impl-dependent/clast-missing-clt2-envs.lisp"
                     )
-	      :only-exported t)
+	      :only-exported t
+              )
 
 ;;;; end of file -- clast-dot.lisp
