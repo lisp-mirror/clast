@@ -145,4 +145,85 @@ as per the Hyperspec."))
          (lisp-implementation-version)
          ))
 
+
+;;;; The Magnificent (yet neglected) 7; plus 2.
+;;;; CLtL2 environment manipulation manipulation functions.
+;;;;
+;;;; Declarations and documentation.
+;;;; These are "forward declarations" as the actual definitions are
+;;;; implementation dependent.
+
+;;; environment-query-fn
+;;; Can be made more precise.
+
+(deftype environment-query-fn ()
+  '(function (symbol &optional t) (values symbol t t)))
+
+
+;;; Forward declarations.
+
+(declaim (ftype environment-query-fn variable-information))
+(declaim (ftype environment-query-fn function-information))
+(declaim (ftype environment-query-fn declaration-information))
+(declaim (ftype environment-query-fn block-information))
+(declaim (ftype environment-query-fn tag-information))
+
+(declaim (ftype (function (t &key &allow-other-keys) t)
+                augment-environment))
+
+(declaim (ftype function parse-macro)) ; FTTB.
+(declaim (ftype function enclose))     ; FTTB.
+
+
+(eval-when (:load-toplevel :execute)
+  (setf (documentation 'variable-information 'function)
+        "Returns information about variable VAR.
+
+KIND is NIL if no information can be found in ENV.
+
+Arguments and Values:
+
+VAR --- a symbol.
+ENV --- an environment.
+KIND  --- one of :lexical, :special, :constant or NIL.
+LOCAL --- true if VAR is \"local\".
+DECLS --- declarations regarding VAR in ENV.
+
+
+See Also:
+
+CLtL2 8.5 Environments.")
+
+  (setf (documentation 'function-information 'function)
+        "Returns information about function FN.
+
+NIL is returned if no information can be found in ENV.
+
+See Also:
+
+CLtL2 8.5 Environments.")
+
+  (setf (documentation 'declaration-information 'function)
+        "Returns information about declaration DECL.
+
+See Also:
+
+CLtL2 8.5 Environments.")
+
+  (setf (documentation 'block-information 'function)
+        "Returns information about block named BLOCK-NAME.
+
+See Also:
+
+CLtL2 8.5 Environments, although BLOCK-INFORMATION is not in it.")
+
+  (setf (documentation 'tag-information 'function)
+        "Returns information about tag named TAG-NAME.
+
+See Also:
+
+CLtL2 8.5 Environments, although TAG-INFORMATION is not in it.")
+  )
+                
+
 ;;;; end of file -- env.lisp --
