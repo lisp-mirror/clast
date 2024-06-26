@@ -80,7 +80,7 @@ Hyperspec 3.1.1.1")
                         )
   "The CLAST Environment Structure.
 
-A wrapper around the underlying enviroment dta structures."
+A wrapper around the underlying enviroment data structures."
   (env nil) ; The &environment CL environment.
   (global-extensions nil)
   )
