@@ -94,6 +94,8 @@
                 get-implementation-env))
 
 
+;;; get-implementation-env
+
 (defun get-implementation-env (env)
   (declare (type (or null
                      sys::augmented-environment
@@ -152,7 +154,8 @@
 
 ;;; env-item-info --
 ;;;
-;;; Auxiliary function used in the *-information functions.
+;;; Auxiliary function used in the *-information functions to ensure
+;;; we access also the "global extensions".
 
 (defun env-item-info (accessor item env)
   (declare (type (function (symbol &optional t)
@@ -177,6 +180,7 @@
            (values kind local decls) ; It should be NIL, NIL, NIL.
            ))
     ))
+
 
 ;;; variable-information
 

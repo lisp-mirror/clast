@@ -87,6 +87,8 @@
   (make-env 'parsing-environment env))
 
 
+;;; get-implementation-env
+
 (defun get-implementation-env (env) ; This is needed for the internal API.
   (declare (type (or ; null ; In Allegro this should never be NIL.
                      sys::augmentable-environment
@@ -100,7 +102,11 @@
 
 (eval-when (:load-toplevel :execute)
   (setq *cl-global-env* (ensure-parsing-environment nil))
+  
   ;; This will work if above definitions are not changed.
+  ;; It is necessary for Allegro, as it really does not like NIL as
+  ;; `null` lexical environment as soon as things get just a tad
+  ;; complicated.
   )
 
 
