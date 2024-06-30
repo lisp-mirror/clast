@@ -241,7 +241,9 @@
 				declare
 				reset
 				global
+				&allow-other-keys
 				)
+
   "Create a new environment based on ENV.
 
 The new environment \"augmenting\" ENV according to the values of the

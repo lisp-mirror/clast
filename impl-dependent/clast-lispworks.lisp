@@ -253,6 +253,7 @@
                                 declare
                                 reset
                                 global
+				&allow-other-keys
                                 )
 
   "Create a new environment based on ENV.

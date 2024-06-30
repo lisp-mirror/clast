@@ -49,11 +49,12 @@
 
 (defun augment-environment (env &rest keys ; Just a utility variable.
                                 &key
-                                variable
-                                symbol-macro
+				variable
+				symbol-macro
                                 function
                                 macro
-                                declare)
+                                declare
+			        &allow-other-keys)
   (declare (ignore variable symbol-macro function macro declare))
   (apply #'ext:augment-environment env keys)
   )
