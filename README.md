@@ -13,13 +13,13 @@ The library relies on a working implementation of the "*environment*"
 functions from **CLtL1**, so, at this point, it does not work on every
 available implementation.  Currently, **CLAST** works on:
 
+- [Allegro](https://www.franz.com) at least 11.x.
+- [Clozure CL](https://www.clozure.com) at least 1.12.2.
 - [Lispworks](https://www.lispworks.com) at least 8.x.
 - [SBCL](https://www.sbcl.org) at least 2.2.9.
-- [Allegro](https://www.franz.com) at least 11.x.
 
 Other implementations are in the works:
-[CMUCL](https://cmucl.cons.org) and [Clozure
-CL](https://www.clozure.com) will be ready soon.
+[CMUCL](https://cmucl.cons.org) and others will be ready soon.
 
 See the file `COPYING` for licensing information
 
@@ -39,6 +39,14 @@ the test system to run the tests, you will not need `fiveam`.  I
 suggest you `load` (or `quickload`) `fiveam` **before** loading the
 **CLAST** system file, to minimize interaction with the building
 process.
+
+### Warnings
+
+[SBCL](https://www.sbcl.org) generates some hairy warnings during
+compilation.  They apear to be type-checking and optimization related
+(plus the usual obnoxious `style-warnings` about stuff that should not
+flagged as such).  There should not be any problems about it.
+
 
 
 Testing
